@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { transactionAPI, memberAPI, bookAPI } from '@/services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { AlertCircle, CheckCircle2, Search, User, BookOpen, AlertTriangle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Search, User, BookOpen, AlertTriangle, ChevronDown, Loader2 } from 'lucide-react';
 
 interface MemberInfo {
   _id: string;
@@ -33,45 +32,82 @@ interface BookInfo {
 const FINE_PER_DAY = 10;
 
 export default function ReturnBookForm() {
-  const [memberIdInput, setMemberIdInput] = useState('');
+  // Member search state
+  const [allMembers, setAllMembers] = useState<MemberInfo[]>([]);
+  const [membersLoaded, setMembersLoaded] = useState(false);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [memberSearch, setMemberSearch] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Selected member state
   const [member, setMember] = useState<MemberInfo | null>(null);
   const [transactions, setTransactions] = useState<IssuedTransaction[]>([]);
   const [booksMap, setBooksMap] = useState<Record<string, BookInfo>>({});
   const [selectedTransactionId, setSelectedTransactionId] = useState('');
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [txLoading, setTxLoading] = useState(false);
   const [returnLoading, setReturnLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchError, setSearchError] = useState('');
   const [success, setSuccess] = useState(false);
   const [successData, setSuccessData] = useState<any>(null);
 
-  const handleMemberSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!memberIdInput.trim()) return;
+  // Lazy load members on first focus/interaction
+  const loadMembers = useCallback(async () => {
+    if (membersLoaded || membersLoading) return;
+    setMembersLoading(true);
+    try {
+      const res = await memberAPI.getAll();
+      setAllMembers(res.data.data || []);
+      setMembersLoaded(true);
+    } catch (err) {
+      console.error('Failed to load members', err);
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [membersLoaded, membersLoading]);
 
-    setSearchLoading(true);
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter members based on search input
+  const filteredMembers = allMembers.filter((m) => {
+    const q = memberSearch.toLowerCase();
+    return (
+      m.memberId.toLowerCase().includes(q) ||
+      m.name.toLowerCase().includes(q) ||
+      m.email.toLowerCase().includes(q)
+    );
+  });
+
+  const handleSelectMember = async (selectedMember: MemberInfo) => {
+    setMember(selectedMember);
+    setMemberSearch(`${selectedMember.name} (${selectedMember.memberId})`);
+    setShowDropdown(false);
     setSearchError('');
     setError('');
-    setMember(null);
-    setTransactions([]);
     setSelectedTransactionId('');
     setSuccess(false);
+    setTxLoading(true);
 
     try {
-      // Fetch member info
-      const memberRes = await memberAPI.getById(memberIdInput.trim());
-      const memberData = memberRes.data.data;
-      setMember(memberData);
-
       // Fetch member's transactions
       let txs: IssuedTransaction[] = [];
       try {
-        const txRes = await transactionAPI.getMemberTransactions(memberData.memberId);
+        const txRes = await transactionAPI.getMemberTransactions(selectedMember.memberId);
         txs = (txRes.data.data || []).filter(
           (t: any) => t.status === 'Issued' || t.status === 'Overdue'
         );
         if (txs.length === 0) {
-          const txRes2 = await transactionAPI.getMemberTransactions(memberData._id);
+          const txRes2 = await transactionAPI.getMemberTransactions(selectedMember._id);
           txs = (txRes2.data.data || []).filter(
             (t: any) => t.status === 'Issued' || t.status === 'Overdue'
           );
@@ -102,9 +138,9 @@ export default function ReturnBookForm() {
         setBooksMap(bMap);
       }
     } catch (err: any) {
-      setSearchError(err.response?.data?.error || 'Member not found. Please check the ID.');
+      setSearchError('Failed to load member transactions.');
     } finally {
-      setSearchLoading(false);
+      setTxLoading(false);
     }
   };
 
@@ -139,14 +175,22 @@ export default function ReturnBookForm() {
       setSuccessData(response.data.data);
       setSuccess(true);
       setSelectedTransactionId('');
-
-      // Refresh the member's transactions
       setTransactions((prev) => prev.filter((t) => t.transactionId !== selectedTransactionId));
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to return book');
     } finally {
       setReturnLoading(false);
     }
+  };
+
+  const handleClearMember = () => {
+    setMember(null);
+    setMemberSearch('');
+    setTransactions([]);
+    setSelectedTransactionId('');
+    setSuccess(false);
+    setError('');
+    setSearchError('');
   };
 
   return (
@@ -158,24 +202,69 @@ export default function ReturnBookForm() {
             <User className="w-5 h-5 text-blue-600" />
             Step 1: Find Member
           </CardTitle>
-          <CardDescription>Enter a Member ID to view their currently issued books</CardDescription>
+          <CardDescription>Search and select a member by name, ID, or email</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleMemberSearch} className="flex gap-3">
-            <div className="relative flex-1">
+          <div ref={dropdownRef} className="relative">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <Input
+              <input
                 type="text"
-                placeholder="Enter Member ID (e.g. MEM001)"
-                className="pl-10"
-                value={memberIdInput}
-                onChange={(e) => setMemberIdInput(e.target.value)}
+                placeholder="Type to search members (name, ID, or email)..."
+                className="w-full border rounded-md px-3 py-2.5 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={memberSearch}
+                onChange={(e) => {
+                  setMemberSearch(e.target.value);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => {
+                  loadMembers();
+                  setShowDropdown(true);
+                }}
               />
+              {membersLoading ? (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 animate-spin" />
+              ) : (
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              )}
             </div>
-            <Button type="submit" disabled={searchLoading}>
-              {searchLoading ? 'Searching...' : 'Search'}
-            </Button>
-          </form>
+
+            {/* Dropdown List */}
+            {showDropdown && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {membersLoading ? (
+                  <div className="p-4 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading members...
+                  </div>
+                ) : filteredMembers.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-slate-500">
+                    {memberSearch ? 'No members match your search.' : 'No members found.'}
+                  </div>
+                ) : (
+                  filteredMembers.map((m) => (
+                    <button
+                      key={m._id}
+                      type="button"
+                      onClick={() => handleSelectMember(m)}
+                      className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-b-0 flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="font-medium text-sm text-slate-900">{m.name}</p>
+                        <p className="text-xs text-slate-500">{m.memberId} • {m.email}</p>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        m.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {m.status}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
           {searchError && (
             <div className="mt-3 flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
               <AlertCircle className="w-4 h-4" />
@@ -192,16 +281,32 @@ export default function ReturnBookForm() {
             <p className="font-semibold text-blue-900">{member.name}</p>
             <p className="text-sm text-blue-700">ID: {member.memberId} • {member.email}</p>
           </div>
-          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            member.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>
-            {member.status}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              member.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+              {member.status}
+            </span>
+            <button
+              onClick={handleClearMember}
+              className="text-xs text-blue-600 hover:text-blue-800 underline"
+            >
+              Change
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Transactions */}
+      {txLoading && (
+        <div className="text-center py-6 text-slate-500 flex items-center justify-center gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Loading issued books...
         </div>
       )}
 
       {/* Step 2: Select Book to Return */}
-      {member && (
+      {member && !txLoading && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
