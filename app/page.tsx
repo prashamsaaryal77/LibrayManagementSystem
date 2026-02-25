@@ -214,6 +214,14 @@ export default function LibraryHomePage() {
                       {activeTransactions.map(tx => {
                         const book = booksMap[tx.bookId];
                         const isOverdue = tx.status === 'Overdue' || new Date(tx.dueDate) < new Date();
+                        
+                        // Calculate fines
+                        let fineAmount = 0;
+                        if (isOverdue) {
+                          const daysOverdue = Math.max(0, Math.floor((new Date().getTime() - new Date(tx.dueDate).getTime()) / (1000 * 60 * 60 * 24)));
+                          fineAmount = daysOverdue * 10; // 10 Rupees per day
+                        }
+                        
                         return (
                           <li key={tx._id} className="p-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
                             <div>
@@ -232,6 +240,11 @@ export default function LibraryHomePage() {
                                 <Calendar className="w-4 h-4" />
                                 {format(new Date(tx.dueDate), 'MMM dd, yyyy')}
                               </div>
+                              {isOverdue && fineAmount > 0 && (
+                                <div className="text-red-600 font-bold text-sm mt-1 border border-red-200 bg-red-50 px-2 py-0.5 rounded-md">
+                                  Fine Due: ₹{fineAmount}
+                                </div>
+                              )}
                             </div>
                           </li>
                         );

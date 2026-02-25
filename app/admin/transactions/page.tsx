@@ -29,7 +29,13 @@ export default function TransactionsPage() {
     try {
       setLoading(true);
       const response = await transactionAPI.getAll();
-      setTransactions(response.data.data || []);
+      const updatedTransactions = (response.data.data || []).map((t: any) => {
+        if (t.status === 'Issued' && new Date(t.dueDate) < new Date()) {
+          return { ...t, status: 'Overdue' };
+        }
+        return t;
+      });
+      setTransactions(updatedTransactions);
     } catch (err) {
       console.error('Failed to load transactions:', err);
     } finally {

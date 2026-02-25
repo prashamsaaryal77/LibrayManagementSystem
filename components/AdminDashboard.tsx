@@ -42,10 +42,17 @@ export default function AdminDashboard() {
 
       const members = membersRes.data.data || [];
       const books = booksRes.data.data || [];
-      const transactions = transactionsRes.data.data || [];
+      let transactions = transactionsRes.data.data || [];
       const overdue = overdueRes.data.data || [];
 
-      const activeBorrows = transactions.filter((t: any) => t.status === 'Issued').length;
+      transactions = transactions.map((t: any) => {
+        if (t.status === 'Issued' && new Date(t.dueDate) < new Date()) {
+          return { ...t, status: 'Overdue' };
+        }
+        return t;
+      });
+
+      const activeBorrows = transactions.filter((t: any) => t.status === 'Issued' || t.status === 'Overdue').length;
 
       setStats({
         totalMembers: members.length,
