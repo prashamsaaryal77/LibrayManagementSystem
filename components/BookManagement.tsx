@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { bookAPI } from '@/services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Plus, X, Package } from 'lucide-react';
 
 interface Book {
   _id: string;
@@ -23,6 +23,8 @@ export default function BookManagement() {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [editingStockBookId, setEditingStockBookId] = useState<string | null>(null);
+  const [addStockCount, setAddStockCount] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
     author: '',
@@ -71,6 +73,22 @@ export default function BookManagement() {
       loadBooks();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to add book');
+    }
+  };
+
+  const handleAddStock = async (book: Book) => {
+    setError('');
+    setSuccess('');
+
+    try {
+      const newTotalCopies = book.totalCopies + addStockCount;
+      await bookAPI.update(book.bookId, { totalCopies: newTotalCopies });
+      setSuccess(`Added ${addStockCount} copies to "${book.title}". New total: ${newTotalCopies}`);
+      setEditingStockBookId(null);
+      setAddStockCount(1);
+      loadBooks();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update stock');
     }
   };
 
@@ -195,6 +213,7 @@ export default function BookManagement() {
                   <th className="text-left py-2 px-2">Available</th>
                   <th className="text-left py-2 px-2">Total</th>
                   <th className="text-left py-2 px-2">Days</th>
+                  <th className="text-left py-2 px-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -208,6 +227,40 @@ export default function BookManagement() {
                     </td>
                     <td className="py-2 px-2">{book.totalCopies}</td>
                     <td className="py-2 px-2">{book.maxBorrowDays}</td>
+                    <td className="py-2 px-2">
+                      {editingStockBookId === book.bookId ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            value={addStockCount}
+                            onChange={(e) => setAddStockCount(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-16 border rounded px-2 py-1 text-sm"
+                          />
+                          <button
+                            onClick={() => handleAddStock(book)}
+                            className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 transition-colors"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => { setEditingStockBookId(null); setAddStockCount(1); }}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setEditingStockBookId(book.bookId)}
+                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors"
+                          title="Add copies to stock"
+                        >
+                          <Package className="w-3.5 h-3.5" />
+                          Add Stock
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
