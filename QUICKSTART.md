@@ -86,9 +86,97 @@ You should see the home page with admin panel options.
 
 ---
 
-## 2-Minute Test
+## 5-Pathway Main Menu Testing (User Portal)
 
-Follow these steps to test the complete workflow:
+The library management system now features a complete user portal with 5 distinct pathways:
+
+### Step 1: Register & Login
+1. Open browser: **http://localhost:3000**
+2. Click "Register" tab
+3. Enter credentials:
+   - Name: "John Doe"
+   - Email: "john@test.com"
+   - Password: "password123"
+4. Click "Create Account"
+5. ✓ User logged in, Main Menu displayed with all controls available
+
+### Step 2: Search Books (Pathway 1)
+1. Click "Search Books" button
+2. Enter search term (title/author/ISBN)
+3. Click "Search"
+4. ✓ Books display with details (title, author, ISBN, available copies)
+
+### Step 3: Borrow Book (Pathway 2)
+**System Pass Checks Applied:**
+- Maximum 3 books per user
+- No outstanding fines allowed
+- Book must be available
+
+1. Click "Borrow Book" button
+2. Select book from dropdown
+3. Click "Borrow Book"
+4. ✓ Success: Book borrowed, due date set to 14 days from now
+
+### Step 4: Return Book (Pathway 3)
+**Fine Calculation:** ₹10 per day overdue
+
+1. Click "Return & Fine" button
+2. Select borrowed book from dropdown
+3. Click "Return Book"
+4. ✓ On-time return: No fine applied
+5. ✓ Late return: Fine calculated and added to account
+
+### Step 5: Pay Fine (Pathway 4)
+**Three Payment Methods Available:**
+- Cash Payment
+- Debit/Credit Card
+- Online Payment (UPI/Net Banking)
+
+**Receipt Generated:** Includes receipt number, date/time, payment method, amount
+
+1. Click "Fine Payment" button
+2. Enter amount (must be ≥ outstanding fine)
+3. Select payment method:
+   - [ ] Cash Payment
+   - [ ] Debit/Credit Card
+   - [ ] Online Payment (UPI/Net Banking)
+4. Click "Process Payment"
+5. ✓ Receipt displays with all transaction details
+6. ✓ Fine badge updates to ₹0 (green)
+7. ✓ Click "Back to Main Menu" to continue
+
+### Step 6: Logout (Pathway 5)
+**Logout Protection:** Cannot logout with outstanding fines
+
+1. Click "Logout" button
+2. Confirmation screen shown
+3. ✓ If fine = 0: Logout succeeds, redirected to login
+4. ✓ If fine > 0: Button disabled, must clear fine first
+
+---
+
+## Comprehensive Workflow Test
+
+**Duration:** ~10 minutes
+
+1. **Register new user** with name, email, password
+2. **Search** for available books
+3. **Borrow** a book (system-pass checks a must-pass)
+4. **Return on-time** (verify ₹0 fine)
+5. **Borrow again** and **return late** (create ₹30+ fine)
+6. **Pay fine** with different payment methods
+   - Try Cash Payment → Receipt displays
+   - Try Card Payment → Receipt displays  
+   - Try Online Payment → Receipt displays
+7. **Logout** after all fines cleared
+8. **Login again** → Verify session persisted
+9. **Repeat** with different users
+
+---
+
+## 2-Minute Test (Admin Panel)
+
+Follow these steps to test the complete admin workflow:
 
 ### 1. Create a Member
 1. Navigate to `/admin/members`

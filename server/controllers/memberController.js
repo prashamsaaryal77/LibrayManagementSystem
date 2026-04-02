@@ -1,44 +1,9 @@
 const Member = require('../models/Member');
 
-// Create a new member
-exports.createMember = async (req, res) => {
-  try {
-    const { memberId, name, email, phone, status, maxBorrowLimit } = req.body;
-
-    // Validation
-    if (!memberId || !name || !email || !phone) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    // Check if member already exists
-    const existingMember = await Member.findOne({ memberId });
-    if (existingMember) {
-      return res.status(400).json({ error: 'Member ID already exists' });
-    }
-
-    const member = new Member({
-      memberId,
-      name,
-      email,
-      phone,
-      status: status || 'Active',
-      maxBorrowLimit: maxBorrowLimit || 5
-    });
-
-    await member.save();
-    res.status(201).json({
-      message: 'Member created successfully',
-      data: member
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Get all members
+// Get all members (users with role='Member')
 exports.getAllMembers = async (req, res) => {
   try {
-    const members = await Member.find().sort({ createdAt: -1 });
+    const members = await Member.find({ role: 'Member' }).sort({ createdAt: -1 });
     res.json({ count: members.length, data: members });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -49,7 +14,7 @@ exports.getAllMembers = async (req, res) => {
 exports.getMemberById = async (req, res) => {
   try {
     const { memberId } = req.params;
-    const member = await Member.findOne({ memberId });
+    const member = await Member.findOne({ memberId, role: 'Member' });
 
     if (!member) {
       return res.status(404).json({ error: 'Member not found' });
@@ -68,7 +33,7 @@ exports.updateMember = async (req, res) => {
     const { name, email, phone, maxBorrowLimit } = req.body;
 
     const member = await Member.findOneAndUpdate(
-      { memberId },
+      { memberId, role: 'Member' },
       { name, email, phone, maxBorrowLimit },
       { new: true, runValidators: true }
     );
@@ -97,7 +62,7 @@ exports.updateMemberStatus = async (req, res) => {
     }
 
     const member = await Member.findOneAndUpdate(
-      { memberId },
+      { memberId, role: 'Member' },
       { status },
       { new: true }
     );

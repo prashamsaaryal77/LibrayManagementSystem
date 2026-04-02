@@ -1,5 +1,24 @@
 const mongoose = require('mongoose');
 
+const borrowedBookSchema = new mongoose.Schema(
+  {
+    bookId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    borrowedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    dueDate: {
+      type: Date,
+      default: null,
+    },
+  },
+  { _id: false }
+);
+
 const memberSchema = new mongoose.Schema({
   memberId: {
     type: String,
@@ -19,10 +38,19 @@ const memberSchema = new mongoose.Schema({
     trim: true,
     lowercase: true,
   },
-  phone: {
+  passwordHash: {
     type: String,
     required: true,
-    trim: true,
+    select: false,
+  },
+  phone: {
+    type: String,
+    default: null,
+  },
+  role: {
+    type: String,
+    enum: ['Admin', 'Member'],
+    default: 'Member',
   },
   status: {
     type: String,
@@ -31,12 +59,27 @@ const memberSchema = new mongoose.Schema({
   },
   maxBorrowLimit: {
     type: Number,
-    default: 5,
+    default: 3,
+  },
+  borrowedBooks: {
+    type: [borrowedBookSchema],
+    default: [],
+  },
+  fines: {
+    type: Number,
+    default: 0,
+    min: 0,
   },
   createdAt: {
     type: Date,
     default: Date.now,
   },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+}, {
+  timestamps: true,
 });
 
 module.exports = mongoose.model('Member', memberSchema);

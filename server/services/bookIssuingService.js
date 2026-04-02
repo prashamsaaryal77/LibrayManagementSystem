@@ -2,84 +2,96 @@ const Member = require('../models/Member');
 const Book = require('../models/Book');
 const Transaction = require('../models/Transaction');
 
-// Implements the 16-step library algorithm for book issuing
+const SYSTEM_PASS_LIMIT = 3;
+
+// Implements the library issue flow with system-pass checks
 const issueBook = async (memberId, bookId, issueDate = new Date()) => {
   try {
-    // Step 1-2: Check whether MemberID exists in the Members Database
-    const member = await Member.findOne({ memberId });
-    if (!member) {
+    const user = await Member.findOne({ memberId });
+    if (!user) {
       return {
         success: false,
         message: 'Invalid Member ID',
-        code: 'INVALID_MEMBER_ID'
+        code: 'INVALID_MEMBER_ID',
       };
     }
 
-    // Step 3-5: Check whether member status is Active
-    if (member.status !== 'Active') {
+    if (user.status !== 'Active') {
       return {
         success: false,
         message: 'Member Account Inactive',
-        code: 'MEMBER_INACTIVE'
+        code: 'MEMBER_INACTIVE',
       };
     }
 
-    // Step 6-7: Count the number of books currently issued to the member
-    const issuedBooksCount = await Transaction.countDocuments({
-      memberId: member.memberId,
-      status: { $in: ['Issued', 'Overdue'] }
-    });
-
-    if (issuedBooksCount >= member.maxBorrowLimit) {
+    if ((user.fines || 0) > 0) {
       return {
         success: false,
-        message: 'Borrow Limit Exceeded',
-        code: 'BORROW_LIMIT_EXCEEDED'
+        message: 'System Pass Failed: unpaid fines must be cleared before borrowing',
+        code: 'UNPAID_FINES',
       };
     }
 
-    // Step 8-9: Check whether BookID exists in the Books Database
+    const issuedBooksCount = await Transaction.countDocuments({
+      memberId: user.memberId,
+      status: { $in: ['Issued', 'Overdue'] },
+    });
+
+    const borrowLimit = Math.min(user.maxBorrowLimit || SYSTEM_PASS_LIMIT, SYSTEM_PASS_LIMIT);
+
+    if (issuedBooksCount >= borrowLimit) {
+      return {
+        success: false,
+        message: `System Pass Failed: members can borrow fewer than ${borrowLimit + 1} active books`,
+        code: 'BORROW_LIMIT_EXCEEDED',
+      };
+    }
+
     const book = await Book.findOne({ bookId });
     if (!book) {
       return {
         success: false,
         message: 'Invalid Book ID',
-        code: 'INVALID_BOOK_ID'
+        code: 'INVALID_BOOK_ID',
       };
     }
 
-    // Step 10-11: Check availability of the book (available copies > 0)
     if (book.availableCopies <= 0) {
       return {
         success: false,
         message: 'Book Not Available',
-        code: 'BOOK_NOT_AVAILABLE'
+        code: 'BOOK_NOT_AVAILABLE',
       };
     }
 
-    // Step 12: Calculate DueDate = IssueDate + Maximum Borrow Days
     const dueDate = new Date(issueDate);
     dueDate.setDate(dueDate.getDate() + book.maxBorrowDays);
 
-    // Step 13: Create a new transaction record
-    const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     const transaction = new Transaction({
       transactionId,
-      memberId: member.memberId,
+      memberId: user.memberId,
       bookId: book.bookId,
+      borrowDate: issueDate,
       issueDate,
       dueDate,
       status: 'Issued',
-      fineAmount: 0
+      fineAmount: 0,
+      finePaid: true,
     });
 
     await transaction.save();
 
-    // Step 14: Decrease available book copies by 1
     book.availableCopies -= 1;
     await book.save();
 
-    // Step 15: Display "Book Issued Successfully" with DueDate
+    member.borrowedBooks.push({
+      bookId: book.bookId,
+      borrowedAt: issueDate,
+      dueDate,
+    });
+    await member.save();
+
     return {
       success: true,
       message: 'Book Issued Successfully',
@@ -90,8 +102,9 @@ const issueBook = async (memberId, bookId, issueDate = new Date()) => {
         bookTitle: book.title,
         issueDate,
         dueDate,
-        maxBorrowDays: book.maxBorrowDays
-      }
+        maxBorrowDays: book.maxBorrowDays,
+        systemPass: true,
+      },
     };
   } catch (error) {
     console.error('Error in issueBook:', error);
@@ -99,11 +112,11 @@ const issueBook = async (memberId, bookId, issueDate = new Date()) => {
       success: false,
       message: 'Error processing book issue',
       code: 'SYSTEM_ERROR',
-      error: error.message
+      error: error.message,
     };
   }
 };
 
 module.exports = {
-  issueBook
+  issueBook,
 };

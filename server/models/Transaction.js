@@ -10,16 +10,20 @@ const transactionSchema = new mongoose.Schema({
   memberId: {
     type: String,
     required: true,
-    ref: 'Member',
   },
   bookId: {
     type: String,
     required: true,
     ref: 'Book',
   },
+  borrowDate: {
+    type: Date,
+    default: null,
+  },
   issueDate: {
     type: Date,
     required: true,
+    default: Date.now,
   },
   dueDate: {
     type: Date,
@@ -37,11 +41,27 @@ const transactionSchema = new mongoose.Schema({
   fineAmount: {
     type: Number,
     default: 0,
+    min: 0,
+  },
+  finePaid: {
+    type: Boolean,
+    default: true,
+  },
+  fineClearedAt: {
+    type: Date,
+    default: null,
   },
   createdAt: {
     type: Date,
     default: Date.now,
   },
+});
+
+transactionSchema.pre('save', function (next) {
+  if (!this.borrowDate) {
+    this.borrowDate = this.issueDate;
+  }
+  next();
 });
 
 module.exports = mongoose.model('Transaction', transactionSchema);
