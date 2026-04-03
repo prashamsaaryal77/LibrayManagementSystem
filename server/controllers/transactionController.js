@@ -47,6 +47,7 @@ exports.issueBook = async (req, res) => {
 exports.borrowBook = async (req, res) => {
   try {
     const { memberId, bookId } = req.body;
+    console.log('Borrow book request:', { memberId, bookId });
 
     if (!memberId || !bookId) {
       return res.status(400).json({ error: 'memberId and bookId are required' });
@@ -78,6 +79,16 @@ exports.borrowBook = async (req, res) => {
     const dueDate = new Date(borrowDate);
     dueDate.setDate(dueDate.getDate() + (book.maxBorrowDays || 14));
 
+    console.log('Creating transaction with:', {
+      transactionId: buildTransactionId(),
+      memberId: member.memberId,
+      bookId: book.bookId,
+      borrowDate,
+      issueDate: borrowDate,
+      dueDate,
+      status: 'Issued',
+    });
+
     const transaction = await Transaction.create({
       transactionId: buildTransactionId(),
       memberId: member.memberId,
@@ -90,6 +101,8 @@ exports.borrowBook = async (req, res) => {
       finePaid: true,
       status: 'Issued',
     });
+
+    console.log('Transaction created:', transaction);
 
     member.borrowedBooks.push({
       bookId: book.bookId,
@@ -112,6 +125,7 @@ exports.borrowBook = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('Error in borrowBook:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -303,11 +317,14 @@ exports.getAllTransactions = async (req, res) => {
 exports.getMemberTransactions = async (req, res) => {
   try {
     const { memberId } = req.params;
+    console.log('Getting transactions for memberId:', memberId);
 
     const transactions = await Transaction.find({ memberId }).sort({ createdAt: -1 });
+    console.log('Found transactions:', transactions.length);
 
     res.json({ count: transactions.length, data: transactions });
   } catch (error) {
+    console.error('Error in getMemberTransactions:', error);
     res.status(500).json({ error: error.message });
   }
 };

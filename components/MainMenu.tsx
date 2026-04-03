@@ -73,7 +73,8 @@ const ADMIN_MODULES = [
   { key: 'logout', label: 'Logout', icon: LogOut },
 ] as const;
 
-const STORAGE_KEY = 'library-main-menu-user';
+const STORAGE_KEY = 'library-user';
+const TOKEN_KEY = 'library-token';
 
 export default function MainMenu() {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -101,7 +102,7 @@ export default function MainMenu() {
     if (typeof window === 'undefined') return;
 
     const savedUser = window.localStorage.getItem(STORAGE_KEY);
-    const savedToken = window.localStorage.getItem(`${STORAGE_KEY}-token`);
+    const savedToken = window.localStorage.getItem(TOKEN_KEY);
 
     if (savedUser) {
       try {
@@ -138,7 +139,7 @@ export default function MainMenu() {
 
   const loadTransactions = async (memberId: string) => {
     try {
-      const response = await transactionAPI.getUserTransactions(memberId);
+      const response = await transactionAPI.getMemberTransactions(memberId);
       setTransactions(response.data.data || []);
     } catch (err) {
       console.error('Failed to load transactions', err);
@@ -150,7 +151,7 @@ export default function MainMenu() {
     setToken(nextToken);
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
-      window.localStorage.setItem(`${STORAGE_KEY}-token`, nextToken);
+      window.localStorage.setItem(TOKEN_KEY, nextToken);
     }
   };
 
@@ -161,7 +162,7 @@ export default function MainMenu() {
     setMessage('You have been logged out successfully.');
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(STORAGE_KEY);
-      window.localStorage.removeItem(`${STORAGE_KEY}-token`);
+      window.localStorage.removeItem(TOKEN_KEY);
     }
   };
 

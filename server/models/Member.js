@@ -22,8 +22,9 @@ const borrowedBookSchema = new mongoose.Schema(
 const memberSchema = new mongoose.Schema({
   memberId: {
     type: String,
-    required: true,
+    required: function() { return this.role === 'Member'; }, // Only required for Members
     unique: true,
+    sparse: true, // Allow null values for unique index
     trim: true,
   },
   name: {

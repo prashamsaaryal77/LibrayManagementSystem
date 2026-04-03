@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5003/api';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -8,6 +8,38 @@ const api: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+  (config) => {
+    if (typeof window !== 'undefined') {
+      const token = window.localStorage.getItem('library-token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token is invalid or expired
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('library-user');
+        window.localStorage.removeItem('library-token');
+      }
+      // Optionally redirect to login or show error
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Authentication API calls
 export const authAPI = {
@@ -44,7 +76,6 @@ export const transactionAPI = {
     api.post('/transactions/pay-fine', paymentData),
   getAll: (params?: Record<string, any>) => api.get('/transactions', { params }),
   getMemberTransactions: (memberId: string) => api.get(`/transactions/member/${memberId}`),
-  getUserTransactions: (memberId: string) => api.get(`/transactions/user/${memberId}`),
   getOverdue: () => api.get('/transactions/overdue'),
   getById: (transactionId: string) => api.get(`/transactions/${transactionId}`),
 };
