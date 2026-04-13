@@ -63,18 +63,18 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-pink-900/20 to-slate-900 flex items-center justify-center p-4">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl animate-pulse"></div>
       </div>
 
       <div className="relative z-10 w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
+            <div className="p-3 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg">
               <BookOpen className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-white">LibraryHub</h1>
@@ -94,7 +94,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
               }}
               className={`flex-1 py-2.5 px-4 rounded-md font-medium transition-all duration-200 ${
                 mode === 'login'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-pink-500 to-pink-600 text-white shadow-lg'
                   : 'text-slate-400 hover:text-slate-300'
               }`}
             >
@@ -108,7 +108,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
               }}
               className={`flex-1 py-2.5 px-4 rounded-md font-medium transition-all duration-200 ${
                 mode === 'register'
-                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-rose-500 to-rose-600 text-white shadow-lg'
                   : 'text-slate-400 hover:text-slate-300'
               }`}
             >
@@ -145,7 +145,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/20"
+                    className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-pink-500 focus:ring-pink-500/20"
                   />
                 </div>
               </div>
@@ -162,7 +162,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/20"
+                  className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-pink-500 focus:ring-pink-500/20"
                 />
               </div>
             </div>
@@ -178,7 +178,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                   value={formData.password}
                   onChange={handleInputChange}
                   required
-                  className="pl-10 pr-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/20"
+                  className="pl-10 pr-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-pink-500 focus:ring-pink-500/20"
                 />
                 <button
                   type="button"
@@ -201,7 +201,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                     placeholder="+1 (555) 123-4567"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/20"
+                    className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-pink-500 focus:ring-pink-500/20"
                   />
                 </div>
               </div>
@@ -212,8 +212,8 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
               disabled={loading}
               className={`w-full py-3 font-semibold rounded-lg transition-all duration-200 ${
                 mode === 'register'
-                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
-                  : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+                  ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700'
+                  : 'bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700'
               } text-white shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {loading ? (
@@ -253,7 +253,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
           <button
             onClick={() => setMode(mode === 'register' ? 'login' : 'register')}
             className={`font-semibold hover:underline ${
-              mode === 'register' ? 'text-blue-400' : 'text-purple-400'
+              mode === 'register' ? 'text-pink-400' : 'text-rose-400'
             }`}
           >
             {mode === 'register' ? 'Sign in' : 'Join now'}

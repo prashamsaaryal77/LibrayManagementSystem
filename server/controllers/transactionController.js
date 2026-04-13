@@ -113,6 +113,7 @@ exports.borrowBook = async (req, res) => {
     await member.save();
 
     book.availableCopies -= 1;
+    book.borrowCount += 1;
     await book.save();
 
     res.status(201).json({

@@ -133,7 +133,7 @@ export default function BookManagement() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="bg-blue-50 p-3 rounded text-sm text-blue-700 mb-4">
+              <div className="bg-pink-50 p-3 rounded text-sm text-pink-700 mb-4">
                 Book ID will be auto-generated in format: BK00001, BK00002, etc.
               </div>
               <div>
@@ -253,7 +253,7 @@ export default function BookManagement() {
                       ) : (
                         <button
                           onClick={() => setEditingStockBookId(book.bookId)}
-                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors"
+                          className="flex items-center gap-1 text-pink-600 hover:text-pink-800 text-xs font-medium transition-colors"
                           title="Add copies to stock"
                         >
                           <Package className="w-3.5 h-3.5" />

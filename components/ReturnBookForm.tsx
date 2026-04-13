@@ -199,7 +199,7 @@ export default function ReturnBookForm() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600" />
+            <User className="w-5 h-5 text-pink-600" />
             Step 1: Find Member
           </CardTitle>
           <CardDescription>Search and select a member by name, ID, or email</CardDescription>
@@ -211,7 +211,7 @@ export default function ReturnBookForm() {
               <input
                 type="text"
                 placeholder="Type to search members (name, ID, or email)..."
-                className="w-full border rounded-md px-3 py-2.5 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full border rounded-md px-3 py-2.5 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
                 value={memberSearch}
                 onChange={(e) => {
                   setMemberSearch(e.target.value);

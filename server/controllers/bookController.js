@@ -75,7 +75,7 @@ exports.createBook = async (req, res) => {
 exports.searchBooks = async (req, res) => {
   try {
     const filters = buildBookFilters(req.query);
-    const books = await Book.find(filters).sort({ createdAt: -1 });
+    const books = await Book.find(filters).sort({ borrowCount: -1, createdAt: -1 });
 
     res.json({
       count: books.length,
@@ -91,7 +91,7 @@ exports.searchBooks = async (req, res) => {
 exports.getAllBooks = async (req, res) => {
   try {
     const filters = buildBookFilters(req.query);
-    const books = await Book.find(filters).sort({ createdAt: -1 });
+    const books = await Book.find(filters).sort({ borrowCount: -1, createdAt: -1 });
     res.json({ count: books.length, data: books });
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -51,7 +51,7 @@ export default function AdminLayout({
                 href={link.href}
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-colors group ${
                   isActive 
-                    ? 'bg-blue-600 text-white' 
+                    ? 'bg-pink-600 text-white' 
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                 }`}
                 title={isCollapsed ? link.name : ''}

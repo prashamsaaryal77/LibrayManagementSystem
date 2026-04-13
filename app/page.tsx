@@ -77,64 +77,7 @@ export default function LibraryHome() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Header Navigation */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-slate-900/50 border-b border-slate-700/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg">
-                <Zap className="w-6 h-6 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-white">LMS</h1>
-            </div>
-
-            {/* User Info & Actions */}
-            <div className="flex items-center gap-4">
-              <div className="flex flex-col items-end gap-1">
-                <p className="text-sm font-semibold text-white">{user.name}</p>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full">
-                    {user.role}
-                  </span>
-                  {user.memberId && (
-                    <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full">
-                      {user.memberId}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className={`text-center px-3 py-2 rounded-lg ${
-                user.fines > 0
-                  ? 'bg-red-500/20 text-red-300'
-                  : 'bg-green-500/20 text-green-300'
-              }`}>
-                <p className="text-xs font-medium">Fine: ₹{user.fines}</p>
-              </div>
-              
-              {user.role === 'Admin' && (
-                <Link href="/admin/dashboard">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Settings className="w-4 h-4" />
-                    Admin
-                  </Button>
-                </Link>
-              )}
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="gap-2"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -49,7 +49,7 @@ export default function TransactionsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Issued':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-pink-100 text-pink-800';
       case 'Overdue':
         return 'bg-red-100 text-red-800';
       case 'Returned':
@@ -82,7 +82,7 @@ export default function TransactionsPage() {
                 onClick={() => setFilterStatus(status)}
                 className={`px-4 py-2 rounded font-medium transition-colors ${
                   filterStatus === status
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-pink-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >

@@ -1,20 +1,14 @@
-'use client';
-
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, CreditCard, LogOut, RotateCcw, Search, Settings, ShieldCheck, Zap, Users, DollarSign, ArrowRight, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  BookOpen, CreditCard, LogOut, RotateCcw, Search,
+  Settings, Zap, Users, DollarSign, ArrowRight,
+  Shield, CheckCircle, AlertCircle, BookMarked, Library,
+  Sparkles, Receipt,
+} from 'lucide-react';
 import { authAPI, bookAPI, transactionAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-
-const COLOR_PALETTE = {
-  background: 'bg-slate-50',
-  card: 'bg-white',
-  border: 'border-slate-200',
-  textPrimary: 'text-slate-800',
-  textSecondary: 'text-slate-500',
-  accent: 'text-blue-600',
-};
 
 interface AppUser {
   id: string;
@@ -39,6 +33,7 @@ interface Book {
   isbn: string;
   status: 'Available' | 'Borrowed';
   availableCopies: number;
+  borrowCount?: number;
 }
 
 interface Transaction {
@@ -54,10 +49,21 @@ interface Transaction {
   status: string;
 }
 
+interface ReceiptData {
+  receiptNumber: string;
+  dateTime: string;
+  userName: string;
+  userEmail: string;
+  amount: number;
+  paymentMethod: string;
+  status: string;
+  transactionId: string;
+}
+
 const PAYMENT_METHODS = [
-  { value: 'cash', label: 'Cash Payment' },
-  { value: 'card', label: 'Debit/Credit Card' },
-  { value: 'online', label: 'Online Payment (UPI/Net Banking)' },
+  { value: 'cash', label: 'Cash Payment', icon: DollarSign },
+  { value: 'card', label: 'Debit/Credit Card', icon: CreditCard },
+  { value: 'online', label: 'Online (UPI/Net Banking)', icon: Zap },
 ] as const;
 
 const MEMBER_MODULES = [
@@ -76,10 +82,19 @@ const ADMIN_MODULES = [
 const STORAGE_KEY = 'library-user';
 const TOKEN_KEY = 'library-token';
 
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] as const } },
+};
+
+const stagger = {
+  visible: { transition: { staggerChildren: 0.08 } },
+};
+
 export default function MainMenu() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [token, setToken] = useState('');
-  const [activeModule, setActiveModule] = useState<(typeof MODULES)[number]['key']>('search');
+  const [activeModule, setActiveModule] = useState<string>('search');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -91,30 +106,16 @@ export default function MainMenu() {
   const [selectedTransactionId, setSelectedTransactionId] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('0');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'online'>('cash');
-  const [receipt, setReceipt] = useState<any>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-  });
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const savedUser = window.localStorage.getItem(STORAGE_KEY);
-    const savedToken = window.localStorage.getItem(TOKEN_KEY);
-
+    const savedUser = localStorage.getItem(STORAGE_KEY);
+    const savedToken = localStorage.getItem(TOKEN_KEY);
     if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch {
-        window.localStorage.removeItem(STORAGE_KEY);
-      }
+      try { setUser(JSON.parse(savedUser)); } catch { localStorage.removeItem(STORAGE_KEY); }
     }
-
-    if (savedToken) {
-      setToken(savedToken);
-    }
+    if (savedToken) setToken(savedToken);
   }, []);
 
   useEffect(() => {
@@ -124,7 +125,7 @@ export default function MainMenu() {
   }, [user]);
 
   useEffect(() => {
-    if (!user || !user.memberId) return;
+    if (!user?.memberId) return;
     loadTransactions(user.memberId);
   }, [user]);
 
@@ -132,27 +133,21 @@ export default function MainMenu() {
     try {
       const response = query.trim() ? await bookAPI.search(query) : await bookAPI.getAll();
       setBooks(response.data.data || []);
-    } catch (err) {
-      console.error('Failed to load books', err);
-    }
+    } catch (err) { console.error('Failed to load books', err); }
   };
 
   const loadTransactions = async (memberId: string) => {
     try {
       const response = await transactionAPI.getMemberTransactions(memberId);
       setTransactions(response.data.data || []);
-    } catch (err) {
-      console.error('Failed to load transactions', err);
-    }
+    } catch (err) { console.error('Failed to load transactions', err); }
   };
 
   const persistSession = (nextUser: AppUser, nextToken: string) => {
     setUser(nextUser);
     setToken(nextToken);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
-      window.localStorage.setItem(TOKEN_KEY, nextToken);
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+    localStorage.setItem(TOKEN_KEY, nextToken);
   };
 
   const clearSession = () => {
@@ -160,32 +155,24 @@ export default function MainMenu() {
     setToken('');
     setTransactions([]);
     setMessage('You have been logged out successfully.');
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(STORAGE_KEY);
-      window.localStorage.removeItem(TOKEN_KEY);
-    }
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-    setMessage('');
-
+    setLoading(true); setError(''); setMessage('');
     try {
       const response = authMode === 'register'
         ? await authAPI.register(formData)
         : await authAPI.login({ email: formData.email, password: formData.password });
-
       persistSession(response.data.user, response.data.token);
       setMessage(response.data.message || `${authMode === 'register' ? 'Registration' : 'Login'} successful.`);
       setFormData({ name: '', email: '', password: '' });
     } catch (err: any) {
       const details = err.response?.data?.details;
       setError(Array.isArray(details) ? details.join(', ') : err.response?.data?.error || 'Authentication failed');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const handleBookSearch = async (e: React.FormEvent) => {
@@ -194,79 +181,38 @@ export default function MainMenu() {
   };
 
   const handleBorrowBook = async () => {
-    if (!user || !selectedBookId) {
-      setError('Please select a book to borrow.');
-      return;
-    }
-
-    if (!user.memberId) {
-      setError('Invalid user session. Please log in again.');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    setMessage('');
-
+    if (!user || !selectedBookId) { setError('Please select a book to borrow.'); return; }
+    if (!user.memberId) { setError('Invalid user session. Please log in again.'); return; }
+    setLoading(true); setError(''); setMessage('');
     try {
       const response = await transactionAPI.borrow({ memberId: user.memberId, bookId: selectedBookId });
       persistSession(response.data.data.user, token);
       setMessage(response.data.message || 'Book borrowed successfully.');
       setSelectedBookId('');
       await Promise.all([loadBooks(searchTerm), loadTransactions(user.memberId)]);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Unable to borrow the selected book');
-    } finally {
-      setLoading(false);
-    }
+    } catch (err: any) { setError(err.response?.data?.error || 'Unable to borrow the selected book'); }
+    finally { setLoading(false); }
   };
 
   const handleReturnBook = async () => {
-    if (!user || !selectedTransactionId) {
-      setError('Please select a transaction to return.');
-      return;
-    }
-
-    if (!user.memberId) {
-      setError('Invalid user session. Please log in again.');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    setMessage('');
-
+    if (!user || !selectedTransactionId) { setError('Please select a transaction to return.'); return; }
+    if (!user.memberId) { setError('Invalid user session. Please log in again.'); return; }
+    setLoading(true); setError(''); setMessage('');
     try {
-      const response = await transactionAPI.returnById(selectedTransactionId, {
-        returnDate: new Date().toISOString(),
-      });
+      const response = await transactionAPI.returnById(selectedTransactionId, { returnDate: new Date().toISOString() });
       persistSession(response.data.data.user, token);
       setMessage(response.data.message || 'Book returned successfully.');
       setSelectedTransactionId('');
       await Promise.all([loadBooks(searchTerm), loadTransactions(user.memberId)]);
       setPaymentAmount(String(response.data.data.user?.fines || 0));
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Unable to return the selected book');
-    } finally {
-      setLoading(false);
-    }
+    } catch (err: any) { setError(err.response?.data?.error || 'Unable to return the selected book'); }
+    finally { setLoading(false); }
   };
 
   const handleFinePayment = async () => {
-    if (!user) {
-      setError('Please log in to make a payment.');
-      return;
-    }
-
-    if (!user.memberId) {
-      setError('Invalid user session. Please log in again.');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    setMessage('');
-
+    if (!user) { setError('Please log in to make a payment.'); return; }
+    if (!user.memberId) { setError('Invalid user session. Please log in again.'); return; }
+    setLoading(true); setError(''); setMessage('');
     try {
       const response = await transactionAPI.payFine({
         memberId: user.memberId,
@@ -274,9 +220,7 @@ export default function MainMenu() {
         amount: Number(paymentAmount || 0),
       });
       persistSession(response.data.data.user, token);
-      
-      // Generate receipt
-      const receiptData = {
+      setReceipt({
         receiptNumber: `RCP-${Date.now()}`,
         dateTime: new Date().toLocaleString(),
         userName: user.name,
@@ -285,511 +229,488 @@ export default function MainMenu() {
         paymentMethod: PAYMENT_METHODS.find(m => m.value === paymentMethod)?.label || paymentMethod,
         status: 'Success',
         transactionId: response.data.data?.transaction?.transactionId || 'N/A',
-      };
-      
-      setReceipt(receiptData);
+      });
       setMessage(response.data.message || 'Fine payment processed successfully.');
       setSelectedTransactionId('');
       setPaymentAmount('0');
       await loadTransactions(user.memberId);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Unable to process fine payment');
-    } finally {
-      setLoading(false);
-    }
+    } catch (err: any) { setError(err.response?.data?.error || 'Unable to process fine payment'); }
+    finally { setLoading(false); }
   };
 
   const handleLogout = () => {
-    if (user && user.fines > 0) {
-      setError('Logout is blocked until all outstanding fines are cleared.');
-      return;
-    }
-
+    if (user && user.fines > 0) { setError('Please clear all outstanding fines before logging out.'); return; }
     clearSession();
-    setMessage('You have been logged out successfully.');
     setReceipt(null);
     setActiveModule('search');
   };
 
-  const availableBooks = useMemo(
-    () => books.filter((book) => book.availableCopies > 0 || book.status === 'Available'),
-    [books]
-  );
-
-  const activeTransactions = useMemo(
-    () => transactions.filter((txn) => txn.status !== 'Returned'),
-    [transactions]
-  );
-
-  const unpaidTransactions = useMemo(
-    () => transactions.filter((txn) => txn.fineAmount > 0 && !txn.finePaid),
-    [transactions]
-  );
-
+  const sortedBooks = useMemo(() => [...books].sort((a, b) => (b.borrowCount || 0) - (a.borrowCount || 0)), [books]);
+  const availableBooks = useMemo(() => books.filter(b => b.availableCopies > 0), [books]);
+  const activeTransactions = useMemo(() => transactions.filter(t => t.status !== 'Returned'), [transactions]);
+  const unpaidTransactions = useMemo(() => transactions.filter(t => t.fineAmount > 0 && !t.finePaid), [transactions]);
   const effectiveModules = user?.role === 'Admin' ? ADMIN_MODULES : MEMBER_MODULES;
 
+  // ─── AUTH SCREEN ───
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
+          className="w-full max-w-5xl grid md:grid-cols-2 rounded-2xl overflow-hidden shadow-elevated bg-card">
+          
+          {/* Left: Branding */}
+          <div className="gradient-warm p-10 flex flex-col justify-between text-secondary-foreground relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M30 0L60 30L30 60L0 30z\' fill=\'none\' stroke=\'white\' stroke-width=\'0.5\'/%3E%3C/svg%3E")' }} />
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-12 h-12 rounded-xl bg-secondary-foreground/20 backdrop-blur-sm flex items-center justify-center">
+                  <Library className="w-6 h-6" />
+                </div>
+                <h1 className="text-2xl font-display font-bold">LibraryHub</h1>
+              </div>
+              <h2 className="text-3xl font-display font-bold mb-4 leading-tight">
+                Your personal<br />reading companion
+              </h2>
+              <p className="text-secondary-foreground/80 text-lg leading-relaxed">
+                Discover, borrow, and manage your reading journey with elegance.
+              </p>
+            </div>
+            <div className="relative z-10 space-y-3 mt-8">
+              {['Search & discover our collection', 'Borrow up to 3 books', 'Track due dates & fines', 'Seamless returns'].map((item, i) => (
+                <div key={i} className="flex items-center gap-3 text-secondary-foreground/90">
+                  <CheckCircle className="w-4 h-4 shrink-0" />
+                  <span className="text-sm">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Form */}
+          <div className="p-10 flex flex-col justify-center">
+            <div className="flex gap-1 bg-secondary rounded-lg p-1 mb-8">
+              {(['login', 'register'] as const).map(mode => (
+                <button key={mode} onClick={() => setAuthMode(mode)}
+                  className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                    authMode === mode ? 'bg-card shadow-soft text-foreground' : 'text-muted-foreground hover:text-foreground'
+                  }`}>
+                  {mode === 'login' ? 'Sign In' : 'Create Account'}
+                </button>
+              ))}
+            </div>
+
+            {error && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-destructive/10 text-destructive text-sm">
+                <AlertCircle className="w-4 h-4 shrink-0" /> {error}
+              </motion.div>
+            )}
+            {message && (
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-success/10 text-success text-sm">
+                <CheckCircle className="w-4 h-4 shrink-0" /> {message}
+              </motion.div>
+            )}
+
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {authMode === 'register' && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Full Name</label>
+                  <Input value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+                    placeholder="Your full name" required className="bg-background" />
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Email Address</label>
+                <Input type="email" value={formData.email} onChange={e => setFormData(p => ({ ...p, email: e.target.value }))}
+                  placeholder="email@example.com" required className="bg-background" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Password</label>
+                <Input type="password" value={formData.password} onChange={e => setFormData(p => ({ ...p, password: e.target.value }))}
+                  placeholder="Minimum 6 characters" required className="bg-background" />
+              </div>
+              <Button type="submit" disabled={loading} variant="warm" size="lg" className="w-full mt-2">
+                {loading ? <span className="animate-spin w-4 h-4 border-2 border-secondary-foreground/30 border-t-secondary-foreground rounded-full" /> : null}
+                {loading ? (authMode === 'register' ? 'Creating Account…' : 'Signing In…') : (authMode === 'register' ? 'Create Account' : 'Sign In')}
+              </Button>
+            </form>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ─── MAIN DASHBOARD ───
   return (
-    <section className="mb-12 space-y-6">
-      {/* Welcome Section */}
-      <div className="rounded-xl p-8 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 shadow-lg text-white relative overflow-hidden group">
-        <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full blur-3xl"></div>
-        </div>
-        <div className="relative z-10">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h2 className="text-4xl font-bold mb-2">Welcome, {user?.name}! 👋</h2>
-              <p className="text-blue-100 text-lg">{user?.role === 'Admin' ? 'Admin Dashboard' : 'Member Library Portal'}</p>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg gradient-warm flex items-center justify-center">
+              <Library className="w-5 h-5 text-secondary-foreground" />
             </div>
-            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-              {user?.role === 'Admin' ? <Shield className="w-8 h-8" /> : <BookOpen className="w-8 h-8" />}
+            <span className="text-lg font-display font-bold text-foreground">LibraryHub</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-medium text-foreground">{user.name}</p>
+              <p className="text-xs text-muted-foreground">{user.role}</p>
+            </div>
+            <div className="w-9 h-9 rounded-full gradient-warm flex items-center justify-center text-secondary-foreground font-semibold text-sm">
+              {user.name.charAt(0).toUpperCase()}
             </div>
           </div>
-          <p className="text-blue-50 mb-4">
-            {user?.role === 'Admin'
-              ? '📚 Manage books, members, and all library operations from your admin panel.'
-              : '📖 Search, borrow, return books and manage your fines.  '}
-          </p>
-          {user?.role === 'Admin' && (
-            <button
-              type="button"
-              onClick={() => window.location.href = '/admin/dashboard'}
-              className="inline-flex items-center gap-2 rounded-lg bg-white text-blue-600 px-6 py-2.5 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
-            >
-              <Settings className="w-5 h-5" /> 
-              Go to Admin Panel
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          )}
         </div>
-      </div>
+      </header>
 
-      {/* Status Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-xl p-5 border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow group">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-              <Shield className="w-5 h-5 text-blue-600" />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        {/* Welcome Banner */}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp}
+          className="rounded-2xl gradient-warm p-8 text-secondary-foreground relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-secondary-foreground/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-5 h-5" />
+              <span className="text-sm font-medium text-secondary-foreground/80">
+                {user.role === 'Admin' ? 'Admin Dashboard' : 'Member Portal'}
+              </span>
             </div>
-            <div className="flex-1">
-              <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">Status</p>
-              <p className="text-slate-900 font-bold text-xl mt-1">{user?.role || 'Member'}</p>
-            </div>
+            <h2 className="text-3xl font-display font-bold mb-2">Welcome back, {user.name}!</h2>
+            <p className="text-secondary-foreground/80 max-w-lg">
+              {user.role === 'Admin'
+                ? 'Manage your library with powerful admin tools and insights.'
+                : 'Discover amazing books, borrow with ease, and track your reading journey.'}
+            </p>
+            {user.role === 'Admin' && (
+              <Button onClick={() => window.location.href = '/admin/dashboard'}
+                variant="outline" size="lg" className="mt-4 bg-secondary-foreground/10 border-secondary-foreground/20 text-secondary-foreground hover:bg-secondary-foreground/20 hover:text-secondary-foreground">
+                <Settings className="w-4 h-4" /> Open Admin Panel <ArrowRight className="w-4 h-4" />
+              </Button>
+            )}
           </div>
-        </div>
-        <div className="rounded-xl p-5 border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow group">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-              <BookOpen className="w-5 h-5 text-purple-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">Books Borrowed</p>
-              <p className="text-slate-900 font-bold text-xl mt-1">{activeTransactions.length || 0} / 3</p>
-            </div>
-          </div>
-        </div>
-        <div className={`rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow group border ${
-          user?.fines === 0
-            ? 'bg-emerald-50 border-emerald-200'
-            : 'bg-rose-50 border-rose-200'
-        }`}>
-          <div className="flex items-start gap-3">
-            <div className={`p-2 rounded-lg ${
-              user?.fines === 0
-                ? 'bg-emerald-200'
-                : 'bg-rose-200'
-            }`}>
-              <DollarSign className={`w-5 h-5 ${
-                user?.fines === 0 ? 'text-emerald-700' : 'text-rose-700'
-              }`} />
-            </div>
-            <div className="flex-1">
-              <p className={`text-xs font-medium uppercase tracking-wide ${
-                user?.fines === 0 ? 'text-emerald-600' : 'text-rose-600'
-              }`}>Outstanding Fine</p>
-              <p className={`font-bold text-xl mt-1 ${
-                user?.fines === 0 ? 'text-emerald-700' : 'text-rose-700'
-              }`}>₹{user?.fines || 0}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-xl p-5 border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow group">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors">
-              <Users className="w-5 h-5 text-orange-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-slate-500 text-xs font-medium uppercase tracking-wide">Borrow Limit</p>
-              <p className="text-slate-900 font-bold text-xl mt-1">3 Books</p>
-            </div>
-          </div>
-        </div>
-      </div>
+        </motion.div>
 
-      {/* Main Modules Card */}
-      <Card className="bg-white border border-slate-200 shadow-md overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-blue-600" />
-            <div>
-              <CardTitle className="text-slate-900">Main Services</CardTitle>
-              <CardDescription className="text-slate-600">
-                Access all library services from here
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
+        {/* Stats Cards */}
+        <motion.div initial="hidden" animate="visible" variants={stagger} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Books Borrowed', value: `${activeTransactions.length} / 3`, icon: BookMarked, color: 'text-primary' },
+            { label: 'Outstanding Fine', value: `₹${user.fines || 0}`, icon: DollarSign, color: user.fines > 0 ? 'text-destructive' : 'text-success' },
+            { label: 'Borrow Limit', value: '3 Books', icon: BookOpen, color: 'text-accent' },
+            { label: 'Account Status', value: user.role, icon: Shield, color: 'text-primary' },
+          ].map((stat, i) => (
+            <motion.div key={i} variants={fadeUp}
+              className="bg-card rounded-xl p-5 shadow-soft border border-border/50 hover:shadow-card transition-shadow duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{stat.label}</span>
+                <stat.icon className={`w-4 h-4 ${stat.color}`} />
+              </div>
+              <p className={`text-2xl font-display font-bold ${stat.color}`}>{stat.value}</p>
+            </motion.div>
+          ))}
+        </motion.div>
 
-        <CardContent className="p-6 space-y-6">
+        {/* Messages */}
+        <AnimatePresence>
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="flex items-center gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+              <AlertCircle className="w-5 h-5 shrink-0" /> {error}
+              <button onClick={() => setError('')} className="ml-auto text-destructive/60 hover:text-destructive">✕</button>
+            </motion.div>
           )}
-
           {message && (
-            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
-              <p className="text-sm text-green-700">{message}</p>
-            </div>
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="flex items-center gap-3 p-4 rounded-xl bg-success/10 border border-success/20 text-success text-sm">
+              <CheckCircle className="w-5 h-5 shrink-0" /> {message}
+              <button onClick={() => setMessage('')} className="ml-auto text-success/60 hover:text-success">✕</button>
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          {/* Module Buttons */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {effectiveModules.map((module) => {
+        {/* Navigation Tabs + Content */}
+        <div className="bg-card rounded-2xl shadow-soft border border-border/50 overflow-hidden">
+          {/* Tab Bar */}
+          <div className="border-b px-4 py-3 flex gap-2 overflow-x-auto scrollbar-none">
+            {effectiveModules.map(module => {
               const Icon = module.icon;
+              const isActive = activeModule === module.key;
               return (
-                <button
-                  key={module.key}
-                  onClick={() => setActiveModule(module.key as any)}
-                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-lg font-medium transition-all duration-200 ${
-                    activeModule === module.key
-                      ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg scale-105'
-                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-blue-50 hover:text-blue-600'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-xs text-center">{module.label}</span>
+                <button key={module.key}
+                  onClick={() => module.key === 'logout' ? handleLogout() : setActiveModule(module.key)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                    isActive
+                      ? 'gradient-warm text-secondary-foreground shadow-soft'
+                      : module.key === 'logout'
+                        ? 'text-destructive hover:bg-destructive/10'
+                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                  }`}>
+                  <Icon className="w-4 h-4" />
+                  {module.label}
                 </button>
               );
             })}
           </div>
 
-          {/* Module Content */}
-          <div className="border-t border-slate-700/50 pt-6 mt-6">
-            {!user ? (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <div className="mb-4 flex gap-2">
-                  <Button type="button" variant={authMode === 'login' ? 'default' : 'outline'} onClick={() => setAuthMode('login')}>
-                    Login
-                  </Button>
-                  <Button type="button" variant={authMode === 'register' ? 'default' : 'outline'} onClick={() => setAuthMode('register')}>
-                    Register
-                  </Button>
-                </div>
-
-                <form onSubmit={handleAuthSubmit} className="space-y-4">
-                  {authMode === 'register' && (
-                    <div>
-                      <label className="mb-2 block text-sm font-medium">Name</label>
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                        placeholder="Your full name"
-                        required
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Email</label>
-                    <Input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                      placeholder="email@example.com"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Password</label>
-                    <Input
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                      placeholder="Minimum 6 characters"
-                      required
-                    />
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Please wait...' : authMode === 'register' ? 'Create Account' : 'Login'}
-                  </Button>
-                </form>
-              </div>
-
-              <div className="rounded-lg border border-dashed border-blue-200 bg-blue-50/60 p-4 text-sm text-slate-700">
-                <h3 className="mb-2 font-semibold text-slate-900">Included modules</h3>
-                <ul className="space-y-2">
-                  <li>• Search books by title, author, ISBN, or status</li>
-                  <li>• Borrow with system-pass checks ({'<'} 3 books, no unpaid fines)</li>
-                  <li>• Return books with automatic fine calculation</li>
-                  <li>• Clear outstanding dues before logout</li>
-                </ul>
-              </div>
-            </div>
-            ) : (
-            <>
-              {/* Module Content Panels */}
-
-              {user?.role === 'Admin' && activeModule === 'adminDashboard' && (
-                <div className="space-y-4">
-                  <p className="text-slate-700">As an Admin, you can add and manage books, members, and transactions from the Admin Dashboard.</p>
-                  <button
-                    type="button"
-                    onClick={() => window.location.href = '/admin/dashboard'}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-white font-semibold hover:bg-indigo-700"
-                  >
-                    Open Admin Panel
-                  </button>
-                  <div className="rounded-lg border border-slate-200 p-4 bg-slate-50 text-slate-600">
-                    <h4 className="font-semibold mb-2 text-slate-800">Admin Tasks</h4>
-                    <ul className="list-disc pl-5 space-y-1 text-sm">
-                      <li>Add / edit / remove books</li>
-                      <li>Approve member registrations</li>
-                      <li>Track all borrowings/returns and overdue fines</li>
-                      <li>View analytics and library reports</li>
-                    </ul>
-                  </div>
-                </div>
-              )}
-
+          {/* Content Area */}
+          <div className="p-6">
+            <AnimatePresence mode="wait">
+              {/* SEARCH */}
               {activeModule === 'search' && (
-                <div className="space-y-4">
-                  <form onSubmit={handleBookSearch} className="flex gap-3">
-                    <Input
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Search by title, author, ISBN, or status"
-                    />
-                    <Button type="submit">Search</Button>
+                <motion.div key="search" initial="hidden" animate="visible" exit="hidden" variants={fadeUp}>
+                  <form onSubmit={handleBookSearch} className="flex gap-3 mb-6">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                        placeholder="Search by title, author, ISBN…" className="pl-10 bg-background" />
+                    </div>
+                    <Button type="submit" variant="warm">Search</Button>
                   </form>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {books.map((book) => (
-                      <div key={book._id} className="rounded-lg border border-slate-200 p-4">
-                        <p className="font-semibold text-slate-900">{book.title}</p>
-                        <p className="text-sm text-slate-600">{book.author}</p>
-                        <p className="mt-2 text-xs text-slate-500">ISBN: {book.isbn}</p>
-                        <p className={`mt-2 text-sm font-medium ${book.availableCopies > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {book.availableCopies > 0 ? `${book.availableCopies} copies available` : 'Currently unavailable'}
-                        </p>
+                  <div className="grid gap-3">
+                    {sortedBooks.map(book => (
+                      <div key={book._id} className="flex items-center justify-between p-4 rounded-xl bg-background border border-border/50 hover:shadow-soft transition-all duration-200 group">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center shrink-0 group-hover:bg-secondary/20 transition-colors">
+                            <BookOpen className="w-5 h-5 text-secondary" />
+                          </div>
+                          <div>
+                            <h4 className="font-display font-semibold text-foreground">{book.title}</h4>
+                            <p className="text-sm text-muted-foreground">by {book.author}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">ISBN: {book.isbn}
+                              {book.borrowCount && book.borrowCount > 0 ? ` · Borrowed ${book.borrowCount} times` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${
+                          book.availableCopies > 0
+                            ? 'bg-success/10 text-success'
+                            : 'bg-destructive/10 text-destructive'
+                        }`}>
+                          {book.availableCopies > 0 ? `${book.availableCopies} available` : 'Unavailable'}
+                        </span>
                       </div>
                     ))}
-                    {books.length === 0 && <p className="text-sm text-slate-500">No books found for the current search.</p>}
-                  </div>
-                </div>
-              )}
-
-              {activeModule === 'borrow' && (
-                <div className="space-y-4">
-                  <p className="text-sm text-slate-600">
-                    You can borrow up to <strong>3</strong> books only when your outstanding fine is <strong>₹0</strong>.
-                  </p>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Choose a book</label>
-                    <select
-                      value={selectedBookId}
-                      onChange={(e) => setSelectedBookId(e.target.value)}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      <option value="">-- Select an available book --</option>
-                      {availableBooks.map((book) => (
-                        <option key={book._id} value={book.bookId}>
-                          {book.title} — {book.author} ({book.availableCopies} available)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button type="button" onClick={handleBorrowBook} disabled={loading || !selectedBookId}>
-                    Borrow Book
-                  </Button>
-                </div>
-              )}
-
-              {activeModule === 'return' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">Active borrowed books</label>
-                    <select
-                      value={selectedTransactionId}
-                      onChange={(e) => setSelectedTransactionId(e.target.value)}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      <option value="">-- Select a transaction --</option>
-                      {activeTransactions.map((transaction) => (
-                        <option key={transaction._id} value={transaction.transactionId}>
-                          {transaction.bookId} — due {new Date(transaction.dueDate).toLocaleDateString()}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button type="button" onClick={handleReturnBook} disabled={loading || !selectedTransactionId}>
-                    Return Book
-                  </Button>
-                </div>
-              )}
-
-              {activeModule === 'payment' && (
-                <div className="space-y-6">
-                  {receipt ? (
-                    <div className="space-y-6">
-                      {/* Receipt Display */}
-                      <div className="rounded-lg border-2 border-green-300 bg-green-50 p-6 space-y-4">
-                        <div className="text-center space-y-2">
-                          <p className="text-sm font-semibold text-green-700">✓ PAYMENT SUCCESSFUL</p>
-                          <h3 className="text-2xl font-bold text-slate-900">Payment Receipt</h3>
-                        </div>
-                        
-                        <div className="border-t-2 border-b-2 border-green-200 py-4 space-y-3">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-slate-600">Receipt No:</span>
-                            <span className="font-mono font-semibold text-slate-900">{receipt.receiptNumber}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-slate-600">Date & Time:</span>
-                            <span className="font-semibold text-slate-900">{receipt.dateTime}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-slate-600">User Name:</span>
-                            <span className="font-semibold text-slate-900">{receipt.userName}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-slate-600">Email:</span>
-                            <span className="font-semibold text-slate-900 text-xs">{receipt.userEmail}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-slate-600">Payment Method:</span>
-                            <span className="font-semibold text-slate-900">{receipt.paymentMethod}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-lg">
-                            <span className="text-slate-900 font-bold">Amount Paid:</span>
-                            <span className="font-bold text-green-700">₹{receipt.amount}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="text-center space-y-2">
-                          <p className="text-xs text-slate-500">Thank you for your payment!</p>
-                          <p className="text-xs text-slate-500">You can now proceed with other activities.</p>
-                        </div>
-                      </div>
-                      
-                      <Button 
-                        type="button" 
-                        onClick={() => {
-                          setReceipt(null);
-                          setActiveModule('search');
-                        }}
-                        className="w-full"
-                      >
-                        Back to Main Menu
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                        Outstanding fine: <strong>₹{user.fines}</strong>
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-sm font-medium">Unpaid fine transaction (optional)</label>
-                        <select
-                          value={selectedTransactionId}
-                          onChange={(e) => setSelectedTransactionId(e.target.value)}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                        >
-                          <option value="">-- Pay all outstanding fines --</option>
-                          {unpaidTransactions.map((transaction) => (
-                            <option key={transaction._id} value={transaction.transactionId}>
-                              {transaction.transactionId} — ₹{transaction.fineAmount}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-sm font-medium">Amount to Pay</label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={paymentAmount}
-                          onChange={(e) => setPaymentAmount(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-sm font-medium">Payment Method</label>
-                        <div className="space-y-2">
-                          {PAYMENT_METHODS.map((method) => (
-                            <div key={method.value} className="flex items-center gap-3">
-                              <input
-                                type="radio"
-                                id={`payment-${method.value}`}
-                                name="paymentMethod"
-                                value={method.value}
-                                checked={paymentMethod === method.value}
-                                onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'online')}
-                                className="h-4 w-4"
-                              />
-                              <label htmlFor={`payment-${method.value}`} className="text-sm font-medium cursor-pointer">
-                                {method.label}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <Button type="button" onClick={handleFinePayment} disabled={loading || Number(paymentAmount) <= 0} className="w-full">
-                        Process Payment
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeModule === 'logout' && (
-                <div className="space-y-4">
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 text-center space-y-4">
-                    <p className="text-lg font-semibold text-slate-900">Are you sure you want to logout?</p>
-                    <p className="text-sm text-slate-600">You will need to login again to access your library account.</p>
-                    {user.fines > 0 && (
-                      <div className="rounded-md border border-red-200 bg-red-50 p-3 text-red-700 text-sm">
-                        <strong>Note:</strong> Outstanding fines: ₹{user.fines}. Please clear all fines before logging out.
+                    {sortedBooks.length === 0 && (
+                      <div className="text-center py-16">
+                        <Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                        <p className="text-muted-foreground font-medium">No books found</p>
+                        <p className="text-sm text-muted-foreground/70">Try adjusting your search terms</p>
                       </div>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={() => setActiveModule('search')}
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      type="button" 
-                      onClick={handleLogout}
-                      disabled={user.fines > 0}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      Confirm Logout
+                </motion.div>
+              )}
+
+              {/* BORROW */}
+              {activeModule === 'borrow' && (
+                <motion.div key="borrow" initial="hidden" animate="visible" exit="hidden" variants={fadeUp} className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-display font-bold text-foreground mb-1">Borrow a Book</h3>
+                    <p className="text-base text-foreground/70">Select from available books in our collection</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-secondary/5 border border-secondary/10 text-sm text-foreground">
+                    <strong>Note:</strong> You can borrow up to 3 books only when your outstanding fine is ₹0.
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-base font-medium text-foreground mb-1.5">Choose a book</label>
+                      <select value={selectedBookId} onChange={e => setSelectedBookId(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-white px-4 py-3 text-base text-slate-900 focus:border-secondary focus:ring-1 focus:ring-secondary/20 outline-none transition-all dark:bg-slate-900 dark:text-slate-100">
+                        <option className="text-slate-900 dark:text-slate-100" value="">— Select an available book —</option>
+                        {availableBooks.map(book => (
+                          <option className="text-slate-900 dark:text-slate-100" key={book._id} value={book.bookId}>
+                            {book.title} — {book.author} ({book.availableCopies} available)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <Button onClick={handleBorrowBook} disabled={loading || !selectedBookId} variant="warm" size="lg" className="w-full">
+                      {loading ? <span className="animate-spin w-4 h-4 border-2 border-secondary-foreground/30 border-t-secondary-foreground rounded-full" /> : <BookOpen className="w-4 h-4" />}
+                      {loading ? 'Borrowing…' : 'Borrow Book'}
                     </Button>
                   </div>
-                </div>
+                </motion.div>
               )}
-            </>
-          )}
-            </div>
-        </CardContent>
-      </Card>
-    </section>
+
+              {/* RETURN */}
+              {activeModule === 'return' && (
+                <motion.div key="return" initial="hidden" animate="visible" exit="hidden" variants={fadeUp} className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-display font-bold text-foreground mb-1">Return a Book</h3>
+                    <p className="text-base text-foreground/70">Return borrowed books and check for any fines</p>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-base font-medium text-foreground mb-1.5">Select book to return</label>
+                      <select value={selectedTransactionId} onChange={e => setSelectedTransactionId(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-white px-4 py-3 text-base text-slate-900 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none transition-all dark:bg-slate-900 dark:text-slate-100">
+                        <option className="text-slate-900 dark:text-slate-100" value="">— Select a transaction —</option>
+                        {activeTransactions.map(t => (
+                          <option className="text-slate-900 dark:text-slate-100" key={t._id} value={t._id}>
+                            {t.bookId} — due {new Date(t.dueDate).toLocaleDateString()}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <Button onClick={handleReturnBook} disabled={loading || !selectedTransactionId} variant="success" size="lg" className="w-full">
+                      {loading ? <span className="animate-spin w-4 h-4 border-2 border-success-foreground/30 border-t-success-foreground rounded-full" /> : <RotateCcw className="w-4 h-4" />}
+                      {loading ? 'Returning…' : 'Return Book'}
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* PAYMENT */}
+              {activeModule === 'payment' && (
+                <motion.div key="payment" initial="hidden" animate="visible" exit="hidden" variants={fadeUp}>
+                  {receipt ? (
+                    <div className="max-w-md mx-auto space-y-6">
+                      <div className="text-center">
+                        <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
+                          <CheckCircle className="w-8 h-8 text-success" />
+                        </div>
+                        <h3 className="text-2xl font-display font-bold text-foreground">Payment Successful!</h3>
+                      </div>
+                      <div className="bg-background rounded-xl border border-border p-6 space-y-3">
+                        {[
+                          ['Receipt No', receipt.receiptNumber],
+                          ['Date & Time', receipt.dateTime],
+                          ['Name', receipt.userName],
+                          ['Email', receipt.userEmail],
+                          ['Payment Method', receipt.paymentMethod],
+                          ['Amount Paid', `₹${receipt.amount}`],
+                        ].map(([label, value]) => (
+                          <div key={label} className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">{label}</span>
+                            <span className="font-medium text-foreground">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <Button onClick={() => { setReceipt(null); setActiveModule('search'); }} variant="warm" size="lg" className="w-full">
+                        <ArrowRight className="w-4 h-4" /> Back to Main Menu
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-xl font-display font-bold text-foreground mb-1">Fine Payment</h3>
+                          <p className="text-base text-foreground/70">Clear outstanding fines to continue borrowing</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-foreground/70">Outstanding</p>
+                          <p className={`text-2xl font-display font-bold ${user.fines > 0 ? 'text-destructive' : 'text-success'}`}>₹{user.fines}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-base font-medium text-foreground mb-1.5">Transaction (optional)</label>
+                          <select value={selectedTransactionId} onChange={e => setSelectedTransactionId(e.target.value)}
+                            className="w-full rounded-lg border border-border bg-white px-4 py-3 text-base text-slate-900 focus:border-secondary focus:ring-1 focus:ring-secondary/20 outline-none transition-all dark:bg-slate-900 dark:text-slate-100">
+                            <option className="text-slate-900 dark:text-slate-100" value="">— Pay all outstanding fines —</option>
+                            {unpaidTransactions.map(t => (
+                              <option className="text-slate-900 dark:text-slate-100" key={t._id} value={t._id}>
+                                {t.transactionId} — ₹{t.fineAmount}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-base font-medium text-foreground mb-1.5">Amount to Pay</label>
+                          <Input type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)}
+                            className="bg-white text-base text-slate-900 dark:bg-slate-900 dark:text-slate-100" />
+                        </div>
+
+                        <div>
+                          <label className="block text-base font-medium text-foreground mb-3">Payment Method</label>
+                          <div className="grid grid-cols-3 gap-3">
+                            {PAYMENT_METHODS.map(method => {
+                              const MIcon = method.icon;
+                              return (
+                                <button key={method.value} onClick={() => setPaymentMethod(method.value as any)}
+                                  className={`p-3 rounded-xl border text-center text-sm font-medium transition-all duration-200 ${
+                                    paymentMethod === method.value
+                                      ? 'border-secondary bg-secondary/5 text-secondary shadow-soft'
+                                      : 'border-border bg-background text-muted-foreground hover:border-secondary/30'
+                                  }`}>
+                                  <MIcon className="w-5 h-5 mx-auto mb-1.5" />
+                                  {method.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <Button onClick={handleFinePayment} disabled={loading} variant="warm" size="lg" className="w-full">
+                          {loading ? <span className="animate-spin w-4 h-4 border-2 border-secondary-foreground/30 border-t-secondary-foreground rounded-full" /> : <CreditCard className="w-4 h-4" />}
+                          {loading ? 'Processing…' : 'Process Payment'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* ADMIN */}
+              {activeModule === 'adminDashboard' && user.role === 'Admin' && (
+                <motion.div key="admin" initial="hidden" animate="visible" exit="hidden" variants={fadeUp} className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-display font-bold text-foreground mb-1">Admin Dashboard</h3>
+                    <p className="text-sm text-muted-foreground">Manage books, members, and transactions</p>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {[
+                      { label: 'Add / edit / remove books', icon: BookOpen },
+                      { label: 'Approve member registrations', icon: Users },
+                      { label: 'Track borrowings & overdue fines', icon: RotateCcw },
+                      { label: 'View analytics & reports', icon: Zap },
+                    ].map((task, i) => (
+                      <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-background border border-border/50">
+                        <div className="w-9 h-9 rounded-lg bg-secondary/10 flex items-center justify-center">
+                          <task.icon className="w-4 h-4 text-secondary" />
+                        </div>
+                        <span className="text-sm font-medium text-foreground">{task.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button onClick={() => window.location.href = '/admin/dashboard'} variant="warm" size="lg">
+                    <Settings className="w-4 h-4" /> Open Admin Panel <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </motion.div>
+              )}
+
+              {/* LOGOUT */}
+              {activeModule === 'logout' && (
+                <motion.div key="logout" initial="hidden" animate="visible" exit="hidden" variants={fadeUp}
+                  className="max-w-md mx-auto text-center space-y-6 py-8">
+                  <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+                    <LogOut className="w-8 h-8 text-destructive" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-display font-bold text-foreground mb-2">Logout Confirmation</h3>
+                    <p className="text-sm text-muted-foreground">You will need to login again to access your account.</p>
+                  </div>
+                  {user.fines > 0 && (
+                    <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+                      <strong>Warning:</strong> Please clear all outstanding fines (₹{user.fines}) before logging out.
+                    </div>
+                  )}
+                  <div className="flex gap-3">
+                    <Button variant="outline" size="lg" className="flex-1" onClick={() => setActiveModule('search')}>
+                      Cancel
+                    </Button>
+                    <Button variant="destructive" size="lg" className="flex-1" onClick={handleLogout}>
+                      <LogOut className="w-4 h-4" /> Confirm Logout
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }
