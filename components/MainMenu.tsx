@@ -6,9 +6,10 @@ import {
   Shield, CheckCircle, AlertCircle, BookMarked, Library,
   Sparkles, Receipt,
 } from 'lucide-react';
-import { authAPI, bookAPI, transactionAPI } from '@/services/api';
+import { bookAPI, transactionAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import AuthPage from '@/components/AuthPage';
 
 interface AppUser {
   id: string;
@@ -95,7 +96,6 @@ export default function MainMenu() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [token, setToken] = useState('');
   const [activeModule, setActiveModule] = useState<string>('search');
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -107,7 +107,6 @@ export default function MainMenu() {
   const [paymentAmount, setPaymentAmount] = useState('0');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'online'>('cash');
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
 
   useEffect(() => {
     const savedUser = localStorage.getItem(STORAGE_KEY);
@@ -159,20 +158,8 @@ export default function MainMenu() {
     localStorage.removeItem(TOKEN_KEY);
   };
 
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true); setError(''); setMessage('');
-    try {
-      const response = authMode === 'register'
-        ? await authAPI.register(formData)
-        : await authAPI.login({ email: formData.email, password: formData.password });
-      persistSession(response.data.user, response.data.token);
-      setMessage(response.data.message || `${authMode === 'register' ? 'Registration' : 'Login'} successful.`);
-      setFormData({ name: '', email: '', password: '' });
-    } catch (err: any) {
-      const details = err.response?.data?.details;
-      setError(Array.isArray(details) ? details.join(', ') : err.response?.data?.error || 'Authentication failed');
-    } finally { setLoading(false); }
+  const handleAuthSuccess = (user: any, token: string) => {
+    persistSession(user, token);
   };
 
   const handleBookSearch = async (e: React.FormEvent) => {
@@ -253,91 +240,7 @@ export default function MainMenu() {
 
   // ─── AUTH SCREEN ───
   if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
-          className="w-full max-w-5xl grid md:grid-cols-2 rounded-2xl overflow-hidden shadow-elevated bg-card">
-          
-          {/* Left: Branding */}
-          <div className="gradient-warm p-10 flex flex-col justify-between text-secondary-foreground relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M30 0L60 30L30 60L0 30z\' fill=\'none\' stroke=\'white\' stroke-width=\'0.5\'/%3E%3C/svg%3E")' }} />
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 rounded-xl bg-secondary-foreground/20 backdrop-blur-sm flex items-center justify-center">
-                  <Library className="w-6 h-6" />
-                </div>
-                <h1 className="text-2xl font-display font-bold">LibraryHub</h1>
-              </div>
-              <h2 className="text-3xl font-display font-bold mb-4 leading-tight">
-                Your personal<br />reading companion
-              </h2>
-              <p className="text-secondary-foreground/80 text-lg leading-relaxed">
-                Discover, borrow, and manage your reading journey with elegance.
-              </p>
-            </div>
-            <div className="relative z-10 space-y-3 mt-8">
-              {['Search & discover our collection', 'Borrow up to 3 books', 'Track due dates & fines', 'Seamless returns'].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 text-secondary-foreground/90">
-                  <CheckCircle className="w-4 h-4 shrink-0" />
-                  <span className="text-sm">{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right: Form */}
-          <div className="p-10 flex flex-col justify-center">
-            <div className="flex gap-1 bg-secondary rounded-lg p-1 mb-8">
-              {(['login', 'register'] as const).map(mode => (
-                <button key={mode} onClick={() => setAuthMode(mode)}
-                  className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                    authMode === mode ? 'bg-card shadow-soft text-foreground' : 'text-muted-foreground hover:text-foreground'
-                  }`}>
-                  {mode === 'login' ? 'Sign In' : 'Create Account'}
-                </button>
-              ))}
-            </div>
-
-            {error && (
-              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-destructive/10 text-destructive text-sm">
-                <AlertCircle className="w-4 h-4 shrink-0" /> {error}
-              </motion.div>
-            )}
-            {message && (
-              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-success/10 text-success text-sm">
-                <CheckCircle className="w-4 h-4 shrink-0" /> {message}
-              </motion.div>
-            )}
-
-            <form onSubmit={handleAuthSubmit} className="space-y-4">
-              {authMode === 'register' && (
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">Full Name</label>
-                  <Input value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-                    placeholder="Your full name" required className="bg-background" />
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Email Address</label>
-                <Input type="email" value={formData.email} onChange={e => setFormData(p => ({ ...p, email: e.target.value }))}
-                  placeholder="email@example.com" required className="bg-background" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Password</label>
-                <Input type="password" value={formData.password} onChange={e => setFormData(p => ({ ...p, password: e.target.value }))}
-                  placeholder="Minimum 6 characters" required className="bg-background" />
-              </div>
-              <Button type="submit" disabled={loading} variant="warm" size="lg" className="w-full mt-2">
-                {loading ? <span className="animate-spin w-4 h-4 border-2 border-secondary-foreground/30 border-t-secondary-foreground rounded-full" /> : null}
-                {loading ? (authMode === 'register' ? 'Creating Account…' : 'Signing In…') : (authMode === 'register' ? 'Create Account' : 'Sign In')}
-              </Button>
-            </form>
-          </div>
-        </motion.div>
-      </div>
-    );
+    return <AuthPage onAuthSuccess={handleAuthSuccess} />;
   }
 
   // ─── MAIN DASHBOARD ───
@@ -350,7 +253,7 @@ export default function MainMenu() {
             <div className="w-9 h-9 rounded-lg gradient-warm flex items-center justify-center">
               <Library className="w-5 h-5 text-secondary-foreground" />
             </div>
-            <span className="text-lg font-display font-bold text-foreground">LibraryHub</span>
+            <span className="text-lg font-display font-bold text-foreground">LMS</span>
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
@@ -438,12 +341,12 @@ export default function MainMenu() {
               return (
                 <button key={module.key}
                   onClick={() => module.key === 'logout' ? handleLogout() : setActiveModule(module.key)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-300 cursor-pointer ${
                     isActive
-                      ? 'gradient-warm text-secondary-foreground shadow-soft'
+                      ? 'bg-gradient-to-r from-secondary to-secondary/80 text-secondary-foreground shadow-lg hover:shadow-xl'
                       : module.key === 'logout'
-                        ? 'text-destructive hover:bg-destructive/10'
-                        : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                        ? 'text-destructive hover:bg-destructive/10 hover:shadow-md'
+                        : 'text-muted-foreground hover:bg-secondary/20 hover:text-foreground hover:shadow-sm'
                   }`}>
                   <Icon className="w-4 h-4" />
                   {module.label}
@@ -464,7 +367,7 @@ export default function MainMenu() {
                       <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                         placeholder="Search by title, author, ISBN…" className="pl-10 bg-background" />
                     </div>
-                    <Button type="submit" variant="warm">Search</Button>
+                    <Button type="submit" variant="default" className="cursor-pointer hover:shadow-md transition-shadow duration-200">Search</Button>
                   </form>
                   <div className="grid gap-3">
                     {sortedBooks.map(book => (
@@ -524,7 +427,7 @@ export default function MainMenu() {
                         ))}
                       </select>
                     </div>
-                    <Button onClick={handleBorrowBook} disabled={loading || !selectedBookId} variant="warm" size="lg" className="w-full">
+                    <Button onClick={handleBorrowBook} disabled={loading || !selectedBookId} variant="default" size="lg" className="w-full cursor-pointer hover:shadow-lg transition-all duration-200 disabled:cursor-not-allowed">
                       {loading ? <span className="animate-spin w-4 h-4 border-2 border-secondary-foreground/30 border-t-secondary-foreground rounded-full" /> : <BookOpen className="w-4 h-4" />}
                       {loading ? 'Borrowing…' : 'Borrow Book'}
                     </Button>
@@ -552,8 +455,8 @@ export default function MainMenu() {
                         ))}
                       </select>
                     </div>
-                    <Button onClick={handleReturnBook} disabled={loading || !selectedTransactionId} variant="success" size="lg" className="w-full">
-                      {loading ? <span className="animate-spin w-4 h-4 border-2 border-success-foreground/30 border-t-success-foreground rounded-full" /> : <RotateCcw className="w-4 h-4" />}
+                    <Button onClick={handleReturnBook} disabled={loading || !selectedTransactionId} variant="default" size="lg" className="w-full bg-success hover:bg-success/90 cursor-pointer hover:shadow-lg transition-all duration-200 disabled:cursor-not-allowed text-white">
+                      {loading ? <span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> : <RotateCcw className="w-4 h-4" />}
                       {loading ? 'Returning…' : 'Return Book'}
                     </Button>
                   </div>
@@ -586,7 +489,7 @@ export default function MainMenu() {
                           </div>
                         ))}
                       </div>
-                      <Button onClick={() => { setReceipt(null); setActiveModule('search'); }} variant="warm" size="lg" className="w-full">
+                      <Button onClick={() => { setReceipt(null); setActiveModule('search'); }} variant="default" size="lg" className="w-full cursor-pointer hover:shadow-lg transition-all duration-200">
                         <ArrowRight className="w-4 h-4" /> Back to Main Menu
                       </Button>
                     </div>
@@ -643,7 +546,7 @@ export default function MainMenu() {
                           </div>
                         </div>
 
-                        <Button onClick={handleFinePayment} disabled={loading} variant="warm" size="lg" className="w-full">
+                        <Button onClick={handleFinePayment} disabled={loading} variant="default" size="lg" className="w-full cursor-pointer hover:shadow-lg transition-all duration-200 disabled:cursor-not-allowed">
                           {loading ? <span className="animate-spin w-4 h-4 border-2 border-secondary-foreground/30 border-t-secondary-foreground rounded-full" /> : <CreditCard className="w-4 h-4" />}
                           {loading ? 'Processing…' : 'Process Payment'}
                         </Button>
@@ -675,7 +578,7 @@ export default function MainMenu() {
                       </div>
                     ))}
                   </div>
-                  <Button onClick={() => window.location.href = '/admin/dashboard'} variant="warm" size="lg">
+                  <Button onClick={() => window.location.href = '/admin/dashboard'} variant="default" size="lg" className="cursor-pointer hover:shadow-lg transition-all duration-200">
                     <Settings className="w-4 h-4" /> Open Admin Panel <ArrowRight className="w-4 h-4" />
                   </Button>
                 </motion.div>

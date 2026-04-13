@@ -77,9 +77,9 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
             <div className="p-3 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg">
               <BookOpen className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-white">LibraryHub</h1>
+            <h1 className="text-3xl font-bold text-white">LMS</h1>
           </div>
-          <p className="text-slate-400 text-sm">Your digital library companion</p>
+          <p className="text-white text-sm">Your digital library companion</p>
         </div>
 
         {/* Main Card */}
@@ -246,7 +246,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-slate-400 text-sm mt-6">
+        <p className="text-center text-white text-sm mt-6">
           {mode === 'register'
             ? 'Already have an account? '
             : "Don't have an account? "}
