@@ -9,8 +9,7 @@ import {
 import { bookAPI, transactionAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import AuthPage from '@/components/AuthPage';
-
+import AuthPage from '@/components/AuthPage';import { toast } from '@/hooks/use-toast';
 interface AppUser {
   id: string;
   name: string;
@@ -177,28 +176,57 @@ export default function MainMenu() {
       setMessage(response.data.message || 'Book borrowed successfully.');
       setSelectedBookId('');
       await Promise.all([loadBooks(searchTerm), loadTransactions(user.memberId)]);
-    } catch (err: any) { setError(err.response?.data?.error || 'Unable to borrow the selected book'); }
+    } catch (err: any) {
+      const errMessage = err.response?.data?.error || 'Unable to borrow the selected book';
+      toast({ title: 'Borrow failed', description: errMessage, variant: 'destructive' });
+      setError(errMessage);
+    }
     finally { setLoading(false); }
   };
 
   const handleReturnBook = async () => {
-    if (!user || !selectedTransactionId) { setError('Please select a transaction to return.'); return; }
-    if (!user.memberId) { setError('Invalid user session. Please log in again.'); return; }
+    if (!user || !selectedTransactionId) {
+      const errMessage = 'Please select a transaction to return.';
+      toast({ title: 'Return failed', description: errMessage, variant: 'destructive' });
+      setError(errMessage);
+      return;
+    }
+    if (!user.memberId) {
+      const errMessage = 'Invalid user session. Please log in again.';
+      toast({ title: 'Return failed', description: errMessage, variant: 'destructive' });
+      setError(errMessage);
+      return;
+    }
     setLoading(true); setError(''); setMessage('');
     try {
       const response = await transactionAPI.returnById(selectedTransactionId, { returnDate: new Date().toISOString() });
       persistSession(response.data.data.user, token);
-      setMessage(response.data.message || 'Book returned successfully.');
+      const successMessage = response.data.message || 'Book returned successfully.';
+      toast({ title: 'Return successful', description: successMessage, variant: 'default' });
       setSelectedTransactionId('');
       await Promise.all([loadBooks(searchTerm), loadTransactions(user.memberId)]);
       setPaymentAmount(String(response.data.data.user?.fines || 0));
-    } catch (err: any) { setError(err.response?.data?.error || 'Unable to return the selected book'); }
+    } catch (err: any) {
+      const errMessage = err.response?.data?.error || 'Unable to return the selected book';
+      toast({ title: 'Return failed', description: errMessage, variant: 'destructive' });
+      setError(errMessage);
+    }
     finally { setLoading(false); }
   };
 
   const handleFinePayment = async () => {
-    if (!user) { setError('Please log in to make a payment.'); return; }
-    if (!user.memberId) { setError('Invalid user session. Please log in again.'); return; }
+    if (!user) {
+      const errMessage = 'Please log in to make a payment.';
+      toast({ title: 'Payment failed', description: errMessage, variant: 'destructive' });
+      setError(errMessage);
+      return;
+    }
+    if (!user.memberId) {
+      const errMessage = 'Invalid user session. Please log in again.';
+      toast({ title: 'Payment failed', description: errMessage, variant: 'destructive' });
+      setError(errMessage);
+      return;
+    }
     setLoading(true); setError(''); setMessage('');
     try {
       const response = await transactionAPI.payFine({
@@ -217,19 +245,30 @@ export default function MainMenu() {
         status: 'Success',
         transactionId: response.data.data?.transaction?.transactionId || 'N/A',
       });
-      setMessage(response.data.message || 'Fine payment processed successfully.');
+      const successMessage = response.data.message || 'Fine payment processed successfully.';
+      toast({ title: 'Payment successful', description: successMessage, variant: 'default' });
       setSelectedTransactionId('');
       setPaymentAmount('0');
       await loadTransactions(user.memberId);
-    } catch (err: any) { setError(err.response?.data?.error || 'Unable to process fine payment'); }
+    } catch (err: any) {
+      const errMessage = err.response?.data?.error || 'Unable to process fine payment';
+      toast({ title: 'Payment failed', description: errMessage, variant: 'destructive' });
+      setError(errMessage);
+    }
     finally { setLoading(false); }
   };
 
   const handleLogout = () => {
-    if (user && user.fines > 0) { setError('Please clear all outstanding fines before logging out.'); return; }
+    if (user && user.fines > 0) {
+      const errMessage = `Please clear all outstanding fines before logging out.`;
+      toast({ title: 'Logout blocked', description: errMessage, variant: 'destructive' });
+      setError(errMessage);
+      return;
+    }
     clearSession();
     setReceipt(null);
     setActiveModule('search');
+    toast({ title: 'Logged out', description: 'You have been logged out successfully.', variant: 'default' });
   };
 
   const sortedBooks = useMemo(() => [...books].sort((a, b) => (b.borrowCount || 0) - (a.borrowCount || 0)), [books]);
@@ -313,25 +352,6 @@ export default function MainMenu() {
           ))}
         </motion.div>
 
-        {/* Messages */}
-        <AnimatePresence>
-          {error && (
-            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="flex items-center gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-              <AlertCircle className="w-5 h-5 shrink-0" /> {error}
-              <button onClick={() => setError('')} className="ml-auto text-destructive/60 hover:text-destructive">✕</button>
-            </motion.div>
-          )}
-          {message && (
-            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="flex items-center gap-3 p-4 rounded-xl bg-success/10 border border-success/20 text-success text-sm">
-              <CheckCircle className="w-5 h-5 shrink-0" /> {message}
-              <button onClick={() => setMessage('')} className="ml-auto text-success/60 hover:text-success">✕</button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Navigation Tabs + Content */}
         <div className="bg-card rounded-2xl shadow-soft border border-border/50 overflow-hidden">
           {/* Tab Bar */}
           <div className="border-b px-4 py-3 flex gap-2 overflow-x-auto scrollbar-none">
@@ -364,8 +384,9 @@ export default function MainMenu() {
                   <form onSubmit={handleBookSearch} className="flex gap-3 mb-6">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                        placeholder="Search by title, author, ISBN…" className="pl-10 bg-background" />
+                      <Input type="text" placeholder="Search by title, author, or ISBN..." value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="pl-10 select-styled" />
                     </div>
                     <Button type="submit" variant="default" className="cursor-pointer hover:shadow-md transition-shadow duration-200">Search</Button>
                   </form>
@@ -418,10 +439,10 @@ export default function MainMenu() {
                     <div>
                       <label className="block text-base font-medium text-foreground mb-1.5">Choose a book</label>
                       <select value={selectedBookId} onChange={e => setSelectedBookId(e.target.value)}
-                        className="w-full rounded-lg border border-border bg-white px-4 py-3 text-base text-slate-900 focus:border-secondary focus:ring-1 focus:ring-secondary/20 outline-none transition-all dark:bg-slate-900 dark:text-slate-100">
-                        <option className="text-slate-900 dark:text-slate-100" value="">— Select an available book —</option>
+                        className="select-styled">
+                        <option value="">— Select an available book —</option>
                         {availableBooks.map(book => (
-                          <option className="text-slate-900 dark:text-slate-100" key={book._id} value={book.bookId}>
+                          <option key={book._id} value={book.bookId}>
                             {book.title} — {book.author} ({book.availableCopies} available)
                           </option>
                         ))}
@@ -446,17 +467,17 @@ export default function MainMenu() {
                     <div>
                       <label className="block text-base font-medium text-foreground mb-1.5">Select book to return</label>
                       <select value={selectedTransactionId} onChange={e => setSelectedTransactionId(e.target.value)}
-                        className="w-full rounded-lg border border-border bg-white px-4 py-3 text-base text-slate-900 focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none transition-all dark:bg-slate-900 dark:text-slate-100">
-                        <option className="text-slate-900 dark:text-slate-100" value="">— Select a transaction —</option>
+                        className="select-styled">
+                        <option value="">— Select a transaction —</option>
                         {activeTransactions.map(t => (
-                          <option className="text-slate-900 dark:text-slate-100" key={t._id} value={t._id}>
+                          <option key={t._id} value={t.transactionId}>
                             {t.bookId} — due {new Date(t.dueDate).toLocaleDateString()}
                           </option>
                         ))}
                       </select>
                     </div>
-                    <Button onClick={handleReturnBook} disabled={loading || !selectedTransactionId} variant="default" size="lg" className="w-full bg-success hover:bg-success/90 cursor-pointer hover:shadow-lg transition-all duration-200 disabled:cursor-not-allowed text-white">
-                      {loading ? <span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> : <RotateCcw className="w-4 h-4" />}
+                    <Button onClick={handleReturnBook} disabled={loading || !selectedTransactionId} variant="default" size="lg" className="w-full bg-success hover:bg-success/90 text-success-foreground cursor-pointer hover:shadow-lg transition-all duration-200 disabled:cursor-not-allowed">
+                      {loading ? <span className="animate-spin w-4 h-4 border-2 border-success-foreground/30 border-t-success-foreground rounded-full" /> : <RotateCcw className="w-4 h-4" />}
                       {loading ? 'Returning…' : 'Return Book'}
                     </Button>
                   </div>
@@ -510,10 +531,10 @@ export default function MainMenu() {
                         <div>
                           <label className="block text-base font-medium text-foreground mb-1.5">Transaction (optional)</label>
                           <select value={selectedTransactionId} onChange={e => setSelectedTransactionId(e.target.value)}
-                            className="w-full rounded-lg border border-border bg-white px-4 py-3 text-base text-slate-900 focus:border-secondary focus:ring-1 focus:ring-secondary/20 outline-none transition-all dark:bg-slate-900 dark:text-slate-100">
-                            <option className="text-slate-900 dark:text-slate-100" value="">— Pay all outstanding fines —</option>
+                            className="select-styled">
+                            <option value="">— Pay all outstanding fines —</option>
                             {unpaidTransactions.map(t => (
-                              <option className="text-slate-900 dark:text-slate-100" key={t._id} value={t._id}>
+                              <option key={t._id} value={t.transactionId}>
                                 {t.transactionId} — ₹{t.fineAmount}
                               </option>
                             ))}
@@ -523,7 +544,7 @@ export default function MainMenu() {
                         <div>
                           <label className="block text-base font-medium text-foreground mb-1.5">Amount to Pay</label>
                           <Input type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)}
-                            className="bg-white text-base text-slate-900 dark:bg-slate-900 dark:text-slate-100" />
+                            className="select-styled" />
                         </div>
 
                         <div>

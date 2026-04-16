@@ -5,6 +5,7 @@ import { BookOpen, Mail, Lock, User, Phone, Eye, EyeOff, AlertCircle, CheckCircl
 import { authAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/use-toast';
 
 interface AuthPageProps {
   onAuthSuccess: (user: any, token: string) => void;
@@ -48,7 +49,8 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
             password: formData.password,
           });
 
-      setSuccess(response.data.message || `${mode === 'register' ? 'Registration' : 'Login'} successful!`);
+      const successMessage = response.data.message || `${mode === 'register' ? 'Registration' : 'Login'} successful!`;
+      toast({ title: 'Success', description: successMessage, variant: 'default' });
       setFormData({ name: '', email: '', password: '', phone: '' });
       
       setTimeout(() => {
@@ -56,36 +58,38 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
       }, 500);
     } catch (err: any) {
       const details = err.response?.data?.details;
-      setError(Array.isArray(details) ? details.join(', ') : err.response?.data?.error || 'Authentication failed');
+      const errMessage = Array.isArray(details) ? details.join(', ') : err.response?.data?.error || 'Authentication failed';
+      toast({ title: 'Authentication failed', description: errMessage, variant: 'destructive' });
+      setError(errMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-pink-900/20 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/15 via-secondary/10 to-accent/10 flex items-center justify-center p-4">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-secondary/20 to-primary/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-accent/20 to-primary/15 rounded-full blur-3xl animate-pulse"></div>
       </div>
 
       <div className="relative z-10 w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg">
-              <BookOpen className="w-8 h-8 text-white" />
+            <div className="p-3 bg-gradient-to-br from-secondary to-primary rounded-lg">
+              <BookOpen className="w-8 h-8 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold text-white">LMS</h1>
+            <h1 className="text-3xl font-bold text-foreground">LMS</h1>
           </div>
-          <p className="text-white text-sm">Your digital library companion</p>
+          <p className="text-muted-foreground text-sm">Your digital library companion</p>
         </div>
 
         {/* Main Card */}
-        <div className="bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-2xl shadow-2xl p-8 space-y-6">
+        <div className="bg-card/90 dark:bg-slate-800/80 backdrop-blur-md border border-border rounded-2xl shadow-2xl p-8 space-y-6">
           {/* Mode Toggle */}
-          <div className="flex gap-2 p-1 bg-slate-700/30 rounded-lg">
+          <div className="flex gap-2 p-1 bg-background/50 dark:bg-slate-700/30 rounded-lg">
             <button
               onClick={() => {
                 setMode('login');
@@ -94,8 +98,8 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
               }}
               className={`flex-1 py-2.5 px-4 rounded-md font-medium transition-all duration-200 ${
                 mode === 'login'
-                  ? 'bg-gradient-to-r from-pink-500 to-pink-600 text-white shadow-lg'
-                  : 'text-slate-400 hover:text-slate-300'
+                  ? 'bg-gradient-to-r from-secondary to-primary text-secondary-foreground shadow-lg'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Sign In
@@ -108,36 +112,21 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
               }}
               className={`flex-1 py-2.5 px-4 rounded-md font-medium transition-all duration-200 ${
                 mode === 'register'
-                  ? 'bg-gradient-to-r from-rose-500 to-rose-600 text-white shadow-lg'
-                  : 'text-slate-400 hover:text-slate-300'
+                  ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-lg'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Join Now
             </button>
           </div>
 
-          {/* Messages */}
-          {error && (
-            <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-red-400">{error}</p>
-            </div>
-          )}
-
-          {success && (
-            <div className="flex items-start gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-green-400">{success}</p>
-            </div>
-          )}
-
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'register' && (
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-300">Full Name</label>
+                <label className="block text-sm font-medium text-foreground">Full Name</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
                     name="name"
                     type="text"
@@ -145,16 +134,16 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-pink-500 focus:ring-pink-500/20"
+                    className="pl-10 select-styled"
                   />
                 </div>
               </div>
             )}
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-300">Email Address</label>
+              <label className="block text-sm font-medium text-foreground">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   name="email"
                   type="email"
@@ -162,15 +151,15 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-pink-500 focus:ring-pink-500/20"
+                  className="pl-10 select-styled"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-300">Password</label>
+              <label className="block text-sm font-medium text-foreground">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   name="password"
                   type={showPassword ? 'text' : 'password'}
@@ -178,12 +167,12 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                   value={formData.password}
                   onChange={handleInputChange}
                   required
-                  className="pl-10 pr-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-pink-500 focus:ring-pink-500/20"
+                  className="pl-10 pr-10 select-styled"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-400"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -192,16 +181,16 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
 
             {mode === 'register' && (
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-300">Phone Number</label>
+                <label className="block text-sm font-medium text-foreground">Phone Number</label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
                     name="phone"
                     type="tel"
                     placeholder="+1 (555) 123-4567"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-pink-500 focus:ring-pink-500/20"
+                    className="pl-10 select-styled"
                   />
                 </div>
               </div>
@@ -212,8 +201,8 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
               disabled={loading}
               className={`w-full py-3 font-semibold rounded-lg transition-all duration-200 ${
                 mode === 'register'
-                  ? 'bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700'
-                  : 'bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700'
+                  ? 'bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90'
+                  : 'bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90'
               } text-white shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {loading ? (
@@ -232,28 +221,28 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
           {/* Info Box */}
           <div className={`p-4 rounded-lg border ${
             mode === 'register'
-              ? 'bg-purple-500/10 border-purple-500/20'
-              : 'bg-blue-500/10 border-blue-500/20'
+              ? 'bg-secondary/15 border-secondary/30'
+              : 'bg-primary/15 border-primary/30'
           }`}>
             <p className={`text-sm font-medium ${
-              mode === 'register' ? 'text-purple-300' : 'text-blue-300'
+              mode === 'register' ? 'text-secondary' : 'text-primary'
             }`}>
               {mode === 'register'
-                ? '✨ You\'ll automatically become a library member with access to 3 books!'
+                ? '✨ Register now and get quick access to your library dashboard and book history.'
                 : '📚 Sign in to search, borrow, and manage your books'}
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <p className="text-center text-white text-sm mt-6">
+        <p className="text-center text-foreground text-sm mt-6">
           {mode === 'register'
             ? 'Already have an account? '
             : "Don't have an account? "}
           <button
             onClick={() => setMode(mode === 'register' ? 'login' : 'register')}
             className={`font-semibold hover:underline ${
-              mode === 'register' ? 'text-pink-400' : 'text-rose-400'
+              mode === 'register' ? 'text-secondary' : 'text-primary'
             }`}
           >
             {mode === 'register' ? 'Sign in' : 'Join now'}

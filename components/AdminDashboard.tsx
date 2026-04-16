@@ -74,24 +74,24 @@ export default function AdminDashboard() {
   const StatCard = ({ title, value, subtitle }: { title: string; value: number; subtitle?: string }) => (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-gray-600">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold">{value}</div>
-        {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+        <div className="text-3xl font-bold text-foreground">{value}</div>
+        {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
       </CardContent>
     </Card>
   );
 
   if (loading) {
-    return <div className="text-center py-12">Loading dashboard...</div>;
+    return <div className="text-center py-12 text-foreground">Loading dashboard...</div>;
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-bold">Admin Dashboard</h2>
-        <p className="text-gray-600 mt-1">Library Management System Overview</p>
+        <h2 className="text-3xl font-bold text-foreground">Admin Dashboard</h2>
+        <p className="text-muted-foreground mt-1">Library Management System Overview</p>
       </div>
 
       {/* Statistics Grid */}
@@ -105,15 +105,15 @@ export default function AdminDashboard() {
 
       {/* Overdue Books Alert */}
       {stats.overdueBooks > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-warning/30 bg-warning/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-800">
+            <CardTitle className="flex items-center gap-2 text-warning">
               <AlertCircle className="w-5 h-5" />
               Overdue Books Alert
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-orange-700">
+            <p className="text-warning/90">
               There are {stats.overdueBooks} book(s) that are overdue. Members should be notified to return them.
             </p>
           </CardContent>
