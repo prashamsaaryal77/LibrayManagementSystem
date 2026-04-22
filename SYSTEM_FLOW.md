@@ -94,7 +94,7 @@ After successful authentication, users access the Main Menu with **5 distinct pa
 - **Three Payment Methods Available**:
   1. **Cash Payment** - In-person payment at library counter
   2. **Debit/Credit Card** - Card payment processing
-  3. **Online Payment (UPI/Net Banking)** - Digital payment options
+  3. **eSewa Payment** - Digital wallet payment
 - **Flow**:
   1. System displays: "Outstanding fine: ₹X"
   2. User selects payment method (Cash/Card/Online)

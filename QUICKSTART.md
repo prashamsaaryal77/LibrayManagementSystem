@@ -130,7 +130,7 @@ The library management system now features a complete user portal with 5 distinc
 **Three Payment Methods Available:**
 - Cash Payment
 - Debit/Credit Card
-- Online Payment (UPI/Net Banking)
+- eSewa Payment
 
 **Receipt Generated:** Includes receipt number, date/time, payment method, amount
 
@@ -139,7 +139,7 @@ The library management system now features a complete user portal with 5 distinc
 3. Select payment method:
    - [ ] Cash Payment
    - [ ] Debit/Credit Card
-   - [ ] Online Payment (UPI/Net Banking)
+   - [ ] eSewa Payment
 4. Click "Process Payment"
 5. ✓ Receipt displays with all transaction details
 6. ✓ Fine badge updates to ₹0 (green)

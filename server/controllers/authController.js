@@ -40,7 +40,6 @@ const sanitizeUser = (user) => ({
   name: user.name,
   email: user.email,
   memberId: user.memberId,
-  phone: user.phone,
   role: user.role,
   status: user.status,
   maxBorrowLimit: user.maxBorrowLimit,
@@ -56,15 +55,21 @@ const generateMemberId = async () => {
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body;
+    const { name, email, password } = req.body;
     const errors = [];
 
     if (!name || !name.trim()) {
       errors.push('Name is required');
+    } else if (name.trim().length < 2) {
+      errors.push('Name must be at least 2 characters long');
+    } else if (/\d/.test(name.trim())) {
+      errors.push('Name cannot contain numbers');
     }
 
     if (!email || !EMAIL_REGEX.test(email)) {
       errors.push('A valid email is required');
+    } else if (/^\d/.test(email)) {
+      errors.push('Email address cannot start with a number');
     }
 
     if (!password || password.length < 6) {
@@ -94,7 +99,6 @@ exports.register = async (req, res) => {
       passwordHash: hashPassword(password),
       role: 'Member',
       memberId: memberId,
-      phone: phone || null,
       status: 'Active',
       maxBorrowLimit: 3,
       borrowedBooks: [],

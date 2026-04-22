@@ -63,7 +63,7 @@ interface ReceiptData {
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash Payment', icon: DollarSign },
   { value: 'card', label: 'Debit/Credit Card', icon: CreditCard },
-  { value: 'online', label: 'Online (UPI/Net Banking)', icon: Zap },
+  { value: 'esewa', label: 'eSewa Payment', icon: Zap },
 ] as const;
 
 const MEMBER_MODULES = [

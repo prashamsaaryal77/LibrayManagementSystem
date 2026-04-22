@@ -51,7 +51,7 @@ The Library Management System has been fully implemented with the following arch
    - **Three Payment Methods**:
      1. Cash Payment (in-person at library)
      2. Debit/Credit Card (card payment)
-     3. Online Payment (UPI/Net Banking)
+     3. eSewa Payment (digital wallet)
    - Payment validation (amount ≥ outstanding fine)
    - **Receipt Generation** with:
      - Unique receipt number (RCP-timestamp)

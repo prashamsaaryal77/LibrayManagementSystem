@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BookOpen, Mail, Lock, User, Phone, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { BookOpen, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { authAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,30 +11,86 @@ interface AuthPageProps {
   onAuthSuccess: (user: any, token: string) => void;
 }
 
+interface ValidationErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+}
+
 export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    phone: '',
   });
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email) && !/^\d/.test(email);
+  };
+
+  const validatePassword = (password: string): boolean => {
+    return password.length >= 6;
+  };
+
+  const validateName = (name: string): boolean => {
+    return name.trim().length >= 2 && !/\d/.test(name.trim());
+  };
+
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+
+    if (mode === 'register') {
+      if (!formData.name.trim()) {
+        errors.name = 'Name is required';
+      } else if (!validateName(formData.name)) {
+        errors.name = 'Name must be at least 2 characters long and cannot contain numbers';
+      }
+    }
+
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      errors.email = 'Please enter a valid email address that does not start with a number';
+    }
+
+    if (!formData.password.trim()) {
+      errors.password = 'Password is required';
+    } else if (!validatePassword(formData.password)) {
+      errors.password = 'Password must be at least 6 characters long';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[name as keyof ValidationErrors]) {
+      setValidationErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
     setSuccess('');
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const response = mode === 'register'
@@ -42,7 +98,6 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
             name: formData.name,
             email: formData.email,
             password: formData.password,
-            phone: formData.phone,
           })
         : await authAPI.login({
             email: formData.email,
@@ -51,7 +106,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
 
       const successMessage = response.data.message || `${mode === 'register' ? 'Registration' : 'Login'} successful!`;
       toast({ title: 'Success', description: successMessage, variant: 'default' });
-      setFormData({ name: '', email: '', password: '', phone: '' });
+      setFormData({ name: '', email: '', password: '' });
       
       setTimeout(() => {
         onAuthSuccess(response.data.user, response.data.token);
@@ -133,10 +188,15 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                     placeholder="John Doe"
                     value={formData.name}
                     onChange={handleInputChange}
-                    required
-                    className="pl-10 select-styled"
+                    className={`pl-10 ${validationErrors.name ? 'border-red-500 focus:border-red-500' : ''}`}
                   />
                 </div>
+                {validationErrors.name && (
+                  <p className="text-sm text-red-500 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {validationErrors.name}
+                  </p>
+                )}
               </div>
             )}
 
@@ -150,10 +210,15 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                   placeholder="you@example.com"
                   value={formData.email}
                   onChange={handleInputChange}
-                  required
-                  className="pl-10 select-styled"
+                  className={`pl-10 ${validationErrors.email ? 'border-red-500 focus:border-red-500' : ''}`}
                 />
               </div>
+              {validationErrors.email && (
+                <p className="text-sm text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {validationErrors.email}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -166,8 +231,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                   placeholder="Minimum 6 characters"
                   value={formData.password}
                   onChange={handleInputChange}
-                  required
-                  className="pl-10 pr-10 select-styled"
+                  className={`pl-10 pr-10 ${validationErrors.password ? 'border-red-500 focus:border-red-500' : ''}`}
                 />
                 <button
                   type="button"
@@ -177,24 +241,13 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {validationErrors.password && (
+                <p className="text-sm text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {validationErrors.password}
+                </p>
+              )}
             </div>
-
-            {mode === 'register' && (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">Phone Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    name="phone"
-                    type="tel"
-                    placeholder="+1 (555) 123-4567"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="pl-10 select-styled"
-                  />
-                </div>
-              </div>
-            )}
 
             <Button
               type="submit"
