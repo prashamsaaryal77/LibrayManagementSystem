@@ -75,11 +75,29 @@ exports.createBook = async (req, res) => {
 exports.searchBooks = async (req, res) => {
   try {
     const filters = buildBookFilters(req.query);
-    const books = await Book.find(filters).sort({ borrowCount: -1, createdAt: -1 });
+    const books = await Book.find(filters);
+
+    const now = new Date();
+    const booksWithScore = books.map(book => {
+      const ageInDays = Math.max(0, (now - new Date(book.createdAt)) / (1000 * 60 * 60 * 24));
+      // Gravity-based time decay formula (Hacker News style)
+      // Score = Borrows / (Age + 2)^1.5
+      const rankingScore = (book.borrowCount || 0) / Math.pow(ageInDays + 2, 1.5);
+      
+      const bookObj = book.toObject();
+      return { ...bookObj, rankingScore };
+    });
+
+    // Sort by rankingScore descending, then by borrowCount, then by createdAt
+    booksWithScore.sort((a, b) => {
+      if (b.rankingScore !== a.rankingScore) return b.rankingScore - a.rankingScore;
+      if (b.borrowCount !== a.borrowCount) return b.borrowCount - a.borrowCount;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
 
     res.json({
-      count: books.length,
-      data: books,
+      count: booksWithScore.length,
+      data: booksWithScore,
       filters: req.query,
     });
   } catch (error) {
@@ -91,8 +109,23 @@ exports.searchBooks = async (req, res) => {
 exports.getAllBooks = async (req, res) => {
   try {
     const filters = buildBookFilters(req.query);
-    const books = await Book.find(filters).sort({ borrowCount: -1, createdAt: -1 });
-    res.json({ count: books.length, data: books });
+    const books = await Book.find(filters);
+    
+    const now = new Date();
+    const booksWithScore = books.map(book => {
+      const ageInDays = Math.max(0, (now - new Date(book.createdAt)) / (1000 * 60 * 60 * 24));
+      const rankingScore = (book.borrowCount || 0) / Math.pow(ageInDays + 2, 1.5);
+      
+      const bookObj = book.toObject();
+      return { ...bookObj, rankingScore };
+    });
+
+    booksWithScore.sort((a, b) => {
+      if (b.rankingScore !== a.rankingScore) return b.rankingScore - a.rankingScore;
+      return b.borrowCount - a.borrowCount;
+    });
+
+    res.json({ count: booksWithScore.length, data: booksWithScore });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

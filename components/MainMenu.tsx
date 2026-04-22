@@ -9,6 +9,7 @@ import {
 import { bookAPI, transactionAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { binarySearch } from '@/lib/algorithmUtils';
 import AuthPage from '@/components/AuthPage';import { toast } from '@/hooks/use-toast';
 interface AppUser {
   id: string;
@@ -34,6 +35,7 @@ interface Book {
   status: 'Available' | 'Borrowed';
   availableCopies: number;
   borrowCount?: number;
+  rankingScore?: number;
 }
 
 interface Transaction {
@@ -270,7 +272,16 @@ export default function MainMenu() {
     toast({ title: 'Logged out', description: 'You have been logged out successfully.', variant: 'default' });
   };
 
-  const sortedBooks = useMemo(() => [...books].sort((a, b) => (b.borrowCount || 0) - (a.borrowCount || 0)), [books]);
+  const sortedBooks = useMemo(() => {
+    return [...books].sort((a, b) => {
+      // If rankingScore is available (from backend), use it
+      if (b.rankingScore !== undefined && a.rankingScore !== undefined) {
+        if (b.rankingScore !== a.rankingScore) return b.rankingScore - a.rankingScore;
+      }
+      // Fallback to borrowCount
+      return (b.borrowCount || 0) - (a.borrowCount || 0);
+    });
+  }, [books]);
   const availableBooks = useMemo(() => books.filter(b => b.availableCopies > 0), [books]);
   const activeTransactions = useMemo(() => transactions.filter(t => t.status !== 'Returned'), [transactions]);
   const unpaidTransactions = useMemo(() => transactions.filter(t => t.fineAmount > 0 && !t.finePaid), [transactions]);
@@ -400,7 +411,8 @@ export default function MainMenu() {
                             <h4 className="font-display font-semibold text-foreground">{book.title}</h4>
                             <p className="text-sm text-muted-foreground">by {book.author}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">ISBN: {book.isbn}
-                              {book.borrowCount && book.borrowCount > 0 ? ` · Borrowed ${book.borrowCount} times` : ''}
+                             {book.borrowCount && book.borrowCount > 0 ? ` · Borrowed ${book.borrowCount} times` : ''}
+                             {book.rankingScore ? ` · Smart Rank: ${book.rankingScore.toFixed(2)}` : ''}
                             </p>
                           </div>
                         </div>

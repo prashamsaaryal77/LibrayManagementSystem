@@ -404,6 +404,37 @@ console.log(`[Stock] Book ${book.title} availability: ${book.availableCopies}`);
 
 ---
 
+## Smart Ranking & Search Algorithms
+
+### 1. Time-Decay Popularity Algorithm (Smart Ranking)
+**Implementation:** `/server/controllers/bookController.js`
+
+Instead of simple popularity, the system uses a gravity-based time decay formula to surface "trending" books.
+
+**Formula:**
+$$Score = \frac{BorrowCount}{(AgeInDays + 2)^{G}}$$
+- **BorrowCount**: Total number of times the book was borrowed.
+- **AgeInDays**: Days since the book was added to the library.
+- **G (Gravity)**: Constant set to `1.5` to control how fast the rank drops over time.
+
+**Purpose**: Ensures that new books with rising popularity can outrank older books that have higher absolute borrow counts but are no longer trending.
+
+---
+
+### 2. Binary Search Optimization
+**Implementation:** `/lib/algorithmUtils.ts`
+
+For internal lookups in the client dashboard, the system utilizes **Binary Search** instead of linear search ($O(N)$).
+
+**Logic**:
+1. The book collection is sorted by `bookId`.
+2. The search space is repeatedly halved until the target is found.
+
+**Time Complexity**: $O(\log N)$
+**Best Use Case**: Finding specific book details in a large collection for borrow/return operations.
+
+---
+
 ## References
 
 - File: `/server/services/bookIssuingService.js`
