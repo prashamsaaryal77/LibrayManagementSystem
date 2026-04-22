@@ -127,9 +127,8 @@ The library management system now features a complete user portal with 5 distinc
 5. ✓ Late return: Fine calculated and added to account
 
 ### Step 5: Pay Fine (Pathway 4)
-**Three Payment Methods Available:**
+**Two Payment Methods Available:**
 - Cash Payment
-- Debit/Credit Card
 - eSewa Payment
 
 **Receipt Generated:** Includes receipt number, date/time, payment method, amount
@@ -138,7 +137,6 @@ The library management system now features a complete user portal with 5 distinc
 2. Enter amount (must be ≥ outstanding fine)
 3. Select payment method:
    - [ ] Cash Payment
-   - [ ] Debit/Credit Card
    - [ ] eSewa Payment
 4. Click "Process Payment"
 5. ✓ Receipt displays with all transaction details

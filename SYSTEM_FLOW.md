@@ -91,13 +91,12 @@ After successful authentication, users access the Main Menu with **5 distinct pa
 
 #### **Pathway 4: Fine Payment** 💳
 - **Purpose**: Pay outstanding fines
-- **Three Payment Methods Available**:
+- **Two Payment Methods Available**:
   1. **Cash Payment** - In-person payment at library counter
-  2. **Debit/Credit Card** - Card payment processing
-  3. **eSewa Payment** - Digital wallet payment
+  2. **eSewa Payment** - Digital wallet payment
 - **Flow**:
   1. System displays: "Outstanding fine: ₹X"
-  2. User selects payment method (Cash/Card/Online)
+  2. User selects payment method (Cash/eSewa)
   3. User enters payment amount
   4. User clicks "Process Payment"
   5. System completes payment:

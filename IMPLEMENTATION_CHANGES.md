@@ -48,10 +48,9 @@ The Library Management System has been fully implemented with the following arch
    - Updates both book and user records
 
 ### 4. **Fine Payment** 💳
-   - **Three Payment Methods**:
+   - **Two Payment Methods**:
      1. Cash Payment (in-person at library)
-     2. Debit/Credit Card (card payment)
-     3. eSewa Payment (digital wallet)
+     2. eSewa Payment (digital wallet)
    - Payment validation (amount ≥ outstanding fine)
    - **Receipt Generation** with:
      - Unique receipt number (RCP-timestamp)
