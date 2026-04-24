@@ -178,7 +178,9 @@ export default function MainMenu() {
     try {
       const response = await transactionAPI.borrow({ memberId: user.memberId, bookId: selectedBookId });
       persistSession(response.data.data.user, token);
-      setMessage(response.data.message || 'Book borrowed successfully.');
+      const successMessage = response.data.message || 'Book borrowed successfully.';
+      toast({ title: 'Borrow successful', description: successMessage, variant: 'default' });
+      setMessage(successMessage);
       setSelectedBookId('');
       await Promise.all([loadBooks(searchTerm), loadTransactions(user.memberId)]);
     } catch (err: any) {

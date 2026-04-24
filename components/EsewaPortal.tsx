@@ -4,7 +4,6 @@ import { Shield, Lock, CreditCard, ChevronLeft, CheckCircle } from 'lucide-react
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface EsewaPortalProps {
   isOpen: boolean;
@@ -57,10 +56,8 @@ export function EsewaPortal({ isOpen, onClose, amount, onSuccess }: EsewaPortalP
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden border-0 bg-white shadow-2xl rounded-2xl">
-        {/* We use VisuallyHidden for DialogTitle to satisfy accessibility requirements without altering the UI */}
-        <VisuallyHidden>
-          <DialogTitle>eSewa Payment Portal</DialogTitle>
-        </VisuallyHidden>
+        {/* Screen reader only title for accessibility */}
+        <DialogTitle className="sr-only">eSewa Payment Portal</DialogTitle>
 
         {/* eSewa Header */}
         <div className="bg-[#60bb46] text-white p-4 flex items-center justify-between shadow-sm relative z-10">
