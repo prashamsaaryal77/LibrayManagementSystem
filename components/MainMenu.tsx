@@ -10,7 +10,10 @@ import { bookAPI, transactionAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { binarySearch } from '@/lib/algorithmUtils';
-import AuthPage from '@/components/AuthPage';import { toast } from '@/hooks/use-toast';
+import AuthPage from '@/components/AuthPage';
+import { toast } from '@/hooks/use-toast';
+import { EsewaPortal } from '@/components/EsewaPortal';
+
 interface AppUser {
   id: string;
   name: string;
@@ -105,8 +108,9 @@ export default function MainMenu() {
   const [selectedBookId, setSelectedBookId] = useState('');
   const [selectedTransactionId, setSelectedTransactionId] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('0');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'online'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'online' | 'esewa'>('cash');
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [isEsewaOpen, setIsEsewaOpen] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem(STORAGE_KEY);
@@ -215,6 +219,38 @@ export default function MainMenu() {
     finally { setLoading(false); }
   };
 
+  const executeFinePayment = async () => {
+    setLoading(true); setError(''); setMessage('');
+    try {
+      const response = await transactionAPI.payFine({
+        memberId: user!.memberId!,
+        transactionId: selectedTransactionId || undefined,
+        amount: Number(paymentAmount || 0),
+      });
+      persistSession(response.data.data.user, token);
+      setReceipt({
+        receiptNumber: `RCP-${Date.now()}`,
+        dateTime: new Date().toLocaleString(),
+        userName: user!.name,
+        userEmail: user!.email,
+        amount: Number(paymentAmount || 0),
+        paymentMethod: PAYMENT_METHODS.find(m => m.value === paymentMethod)?.label || paymentMethod,
+        status: 'Success',
+        transactionId: response.data.data?.transaction?.transactionId || 'N/A',
+      });
+      const successMessage = response.data.message || 'Fine payment processed successfully.';
+      toast({ title: 'Payment successful', description: successMessage, variant: 'default' });
+      setSelectedTransactionId('');
+      setPaymentAmount('0');
+      await loadTransactions(user!.memberId!);
+    } catch (err: any) {
+      const errMessage = err.response?.data?.error || 'Unable to process fine payment';
+      toast({ title: 'Payment failed', description: errMessage, variant: 'destructive' });
+      setError(errMessage);
+    }
+    finally { setLoading(false); }
+  };
+
   const handleFinePayment = async () => {
     if (!user) {
       const errMessage = 'Please log in to make a payment.';
@@ -228,35 +264,17 @@ export default function MainMenu() {
       setError(errMessage);
       return;
     }
-    setLoading(true); setError(''); setMessage('');
-    try {
-      const response = await transactionAPI.payFine({
-        memberId: user.memberId,
-        transactionId: selectedTransactionId || undefined,
-        amount: Number(paymentAmount || 0),
-      });
-      persistSession(response.data.data.user, token);
-      setReceipt({
-        receiptNumber: `RCP-${Date.now()}`,
-        dateTime: new Date().toLocaleString(),
-        userName: user.name,
-        userEmail: user.email,
-        amount: Number(paymentAmount || 0),
-        paymentMethod: PAYMENT_METHODS.find(m => m.value === paymentMethod)?.label || paymentMethod,
-        status: 'Success',
-        transactionId: response.data.data?.transaction?.transactionId || 'N/A',
-      });
-      const successMessage = response.data.message || 'Fine payment processed successfully.';
-      toast({ title: 'Payment successful', description: successMessage, variant: 'default' });
-      setSelectedTransactionId('');
-      setPaymentAmount('0');
-      await loadTransactions(user.memberId);
-    } catch (err: any) {
-      const errMessage = err.response?.data?.error || 'Unable to process fine payment';
-      toast({ title: 'Payment failed', description: errMessage, variant: 'destructive' });
-      setError(errMessage);
+    if (Number(paymentAmount || 0) <= 0) {
+      toast({ title: 'Invalid amount', description: 'Please enter a valid amount to pay.', variant: 'destructive' });
+      return;
     }
-    finally { setLoading(false); }
+
+    if (paymentMethod === 'esewa') {
+      setIsEsewaOpen(true);
+      return;
+    }
+
+    await executeFinePayment();
   };
 
   const handleLogout = () => {
@@ -646,6 +664,17 @@ export default function MainMenu() {
           </div>
         </div>
       </main>
+
+      {/* eSewa Portal Overlay */}
+      <EsewaPortal 
+        isOpen={isEsewaOpen}
+        onClose={() => setIsEsewaOpen(false)}
+        amount={Number(paymentAmount || 0)}
+        onSuccess={() => {
+          setIsEsewaOpen(false);
+          executeFinePayment();
+        }}
+      />
     </div>
   );
 }
