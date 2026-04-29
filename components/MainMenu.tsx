@@ -367,7 +367,7 @@ export default function MainMenu() {
         <motion.div initial="hidden" animate="visible" variants={stagger} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { id: 'borrowed', label: 'Books Borrowed', value: `${activeTransactions.length} / 3`, icon: BookMarked, color: 'text-primary' },
-            { id: 'fine', label: 'Outstanding Fine', value: `₹${user.fines || 0}`, icon: DollarSign, color: user.fines > 0 ? 'text-destructive' : 'text-success' },
+            { id: 'fine', label: 'Outstanding Fine', value: `Rs. ${user.fines || 0}`, icon: DollarSign, color: user.fines > 0 ? 'text-destructive' : 'text-success' },
             { id: 'limit', label: 'Borrow Limit', value: '3 Books', icon: BookOpen, color: 'text-accent' },
             { id: 'status', label: 'Account Status', value: user.role, icon: Shield, color: 'text-primary' },
           ].map((stat, i) => (
@@ -436,7 +436,7 @@ export default function MainMenu() {
                                 {book?.author && <p className="text-sm text-muted-foreground">by {book.author}</p>}
                                 <p className="text-sm text-muted-foreground mt-1">Borrowed: {t.borrowDate ? new Date(t.borrowDate).toLocaleDateString() : 'N/A'}</p>
                                 <p className="text-sm text-muted-foreground">Due Date: <span className={new Date(t.dueDate) < new Date() ? 'text-destructive font-medium' : ''}>{new Date(t.dueDate).toLocaleDateString()}</span></p>
-                                {t.fineAmount > 0 && <p className="text-sm text-destructive font-medium mt-1">Fine: ₹{t.fineAmount}</p>}
+                                {t.fineAmount > 0 && <p className="text-sm text-destructive font-medium mt-1">Fine: Rs. {t.fineAmount}</p>}
                               </div>
                             </div>
                             <Button variant="outline" size="sm" onClick={() => {
@@ -518,7 +518,7 @@ export default function MainMenu() {
                     <p className="text-base text-foreground/70">Select from available books in our collection</p>
                   </div>
                   <div className="p-4 rounded-lg bg-secondary/5 border border-secondary/10 text-sm text-foreground">
-                    <strong>Note:</strong> You can borrow up to 3 books only when your outstanding fine is ₹0.
+                    <strong>Note:</strong> You can borrow up to 3 books only when your outstanding fine is Rs. 0.
                   </div>
                   <div className="space-y-4">
                     <div>
@@ -587,7 +587,7 @@ export default function MainMenu() {
                           ['Name', receipt.userName],
                           ['Email', receipt.userEmail],
                           ['Payment Method', receipt.paymentMethod],
-                          ['Amount Paid', `₹${receipt.amount}`],
+                          ['Amount Paid', `Rs. ${receipt.amount}`],
                         ].map(([label, value]) => (
                           <div key={label} className="flex justify-between text-sm">
                             <span className="text-muted-foreground">{label}</span>
@@ -608,7 +608,7 @@ export default function MainMenu() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-foreground/70">Outstanding</p>
-                          <p className={`text-2xl font-display font-bold ${user.fines > 0 ? 'text-destructive' : 'text-success'}`}>₹{user.fines}</p>
+                          <p className={`text-2xl font-display font-bold ${user.fines > 0 ? 'text-destructive' : 'text-success'}`}>Rs. {user.fines}</p>
                         </div>
                       </div>
 
@@ -620,7 +620,7 @@ export default function MainMenu() {
                             <option value="">— Pay all outstanding fines —</option>
                             {unpaidTransactions.map(t => (
                               <option key={t._id} value={t.transactionId}>
-                                {t.transactionId} — ₹{t.fineAmount}
+                                {t.transactionId} — Rs. {t.fineAmount}
                               </option>
                             ))}
                           </select>
@@ -703,7 +703,7 @@ export default function MainMenu() {
                   </div>
                   {user.fines > 0 && (
                     <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive">
-                      <strong>Warning:</strong> Please clear all outstanding fines (₹{user.fines}) before logging out.
+                      <strong>Warning:</strong> Please clear all outstanding fines (Rs. {user.fines}) before logging out.
                     </div>
                   )}
                   <div className="flex gap-3">
