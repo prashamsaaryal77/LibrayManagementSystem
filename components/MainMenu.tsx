@@ -366,16 +366,17 @@ export default function MainMenu() {
         {/* Stats Cards */}
         <motion.div initial="hidden" animate="visible" variants={stagger} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Books Borrowed', value: `${activeTransactions.length} / 3`, icon: BookMarked, color: 'text-primary' },
-            { label: 'Outstanding Fine', value: `₹${user.fines || 0}`, icon: DollarSign, color: user.fines > 0 ? 'text-destructive' : 'text-success' },
-            { label: 'Borrow Limit', value: '3 Books', icon: BookOpen, color: 'text-accent' },
-            { label: 'Account Status', value: user.role, icon: Shield, color: 'text-primary' },
+            { id: 'borrowed', label: 'Books Borrowed', value: `${activeTransactions.length} / 3`, icon: BookMarked, color: 'text-primary' },
+            { id: 'fine', label: 'Outstanding Fine', value: `₹${user.fines || 0}`, icon: DollarSign, color: user.fines > 0 ? 'text-destructive' : 'text-success' },
+            { id: 'limit', label: 'Borrow Limit', value: '3 Books', icon: BookOpen, color: 'text-accent' },
+            { id: 'status', label: 'Account Status', value: user.role, icon: Shield, color: 'text-primary' },
           ].map((stat, i) => (
             <motion.div key={i} variants={fadeUp}
-              className="bg-card rounded-xl p-5 shadow-soft border border-border/50 hover:shadow-card transition-shadow duration-300">
+              onClick={() => stat.id === 'borrowed' ? setActiveModule('borrowedBooks') : undefined}
+              className={`bg-card rounded-xl p-5 shadow-soft border border-border/50 transition-shadow duration-300 ${stat.id === 'borrowed' ? 'cursor-pointer hover:shadow-card hover:border-primary/30 group' : 'hover:shadow-card'}`}>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{stat.label}</span>
-                <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                <span className={`text-xs font-medium text-muted-foreground uppercase tracking-wider ${stat.id === 'borrowed' ? 'group-hover:text-primary transition-colors' : ''}`}>{stat.label}</span>
+                <stat.icon className={`w-4 h-4 ${stat.color} ${stat.id === 'borrowed' ? 'group-hover:scale-110 transition-transform' : ''}`} />
               </div>
               <p className={`text-2xl font-display font-bold ${stat.color}`}>{stat.value}</p>
             </motion.div>
@@ -405,9 +406,62 @@ export default function MainMenu() {
             })}
           </div>
 
-          {/* Content Area */}
           <div className="p-6">
             <AnimatePresence mode="wait">
+              {/* BORROWED BOOKS */}
+              {activeModule === 'borrowedBooks' && (
+                <motion.div key="borrowedBooks" initial="hidden" animate="visible" exit="hidden" variants={fadeUp} className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-display font-bold text-foreground mb-1">Your Borrowed Books</h3>
+                      <p className="text-base text-foreground/70">View and manage your active borrowings</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setActiveModule('search')}>
+                      Back to Search
+                    </Button>
+                  </div>
+
+                  {activeTransactions.length > 0 ? (
+                    <div className="grid gap-3">
+                      {activeTransactions.map(t => {
+                        const book = books.find(b => b.bookId === t.bookId);
+                        return (
+                          <div key={t._id} className="flex items-center justify-between p-4 rounded-xl bg-background border border-border/50 hover:shadow-soft transition-all duration-200">
+                            <div className="flex items-start gap-4">
+                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <BookMarked className="w-5 h-5 text-primary" />
+                              </div>
+                              <div>
+                                <h4 className="font-display font-semibold text-foreground">{book?.title || `Book ID: ${t.bookId}`}</h4>
+                                {book?.author && <p className="text-sm text-muted-foreground">by {book.author}</p>}
+                                <p className="text-sm text-muted-foreground mt-1">Borrowed: {t.borrowDate ? new Date(t.borrowDate).toLocaleDateString() : 'N/A'}</p>
+                                <p className="text-sm text-muted-foreground">Due Date: <span className={new Date(t.dueDate) < new Date() ? 'text-destructive font-medium' : ''}>{new Date(t.dueDate).toLocaleDateString()}</span></p>
+                                {t.fineAmount > 0 && <p className="text-sm text-destructive font-medium mt-1">Fine: ₹{t.fineAmount}</p>}
+                              </div>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => {
+                              setSelectedTransactionId(t.transactionId);
+                              setActiveModule('return');
+                            }}>
+                              Return Book
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-16 bg-background rounded-xl border border-border/50">
+                      <BookMarked className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                      <p className="text-muted-foreground font-medium">No active borrowed books</p>
+                      <p className="text-sm text-muted-foreground/70 mt-1">You haven't borrowed any books yet.</p>
+                      <Button variant="default" className="mt-4" onClick={() => setActiveModule('borrow')}>
+                        Borrow a Book
+                      </Button>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
               {/* SEARCH */}
               {activeModule === 'search' && (
                 <motion.div key="search" initial="hidden" animate="visible" exit="hidden" variants={fadeUp}>
