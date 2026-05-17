@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { BookOpen, LogOut, Settings, Zap, Users, DollarSign, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AuthPage from '@/components/AuthPage';
@@ -23,6 +24,7 @@ export default function LibraryHome() {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -32,7 +34,12 @@ export default function LibraryHome() {
 
     if (savedUser && savedToken) {
       try {
-        setUser(JSON.parse(savedUser));
+        const parsedUser = JSON.parse(savedUser);
+        if (parsedUser.role === 'Admin') {
+          router.push('/admin/dashboard');
+          return;
+        }
+        setUser(parsedUser);
         setToken(savedToken);
       } catch {
         window.localStorage.removeItem(STORAGE_KEY);
@@ -41,15 +48,19 @@ export default function LibraryHome() {
     }
     
     setIsLoading(false);
-  }, []);
+  }, [router]);
 
   const handleAuthSuccess = (newUser: User, newToken: string) => {
-    setUser(newUser);
-    setToken(newToken);
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
       window.localStorage.setItem(TOKEN_KEY, newToken);
     }
+    if (newUser.role === 'Admin') {
+      router.push('/admin/dashboard');
+      return;
+    }
+    setUser(newUser);
+    setToken(newToken);
   };
 
   const handleLogout = () => {

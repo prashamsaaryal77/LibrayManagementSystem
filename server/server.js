@@ -1,8 +1,9 @@
+const path = require('path');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 
@@ -34,9 +35,9 @@ app.get('/api/health', (req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     error: err.message || 'Internal Server Error',
-    details: err.details || null 
+    details: err.details || null
   });
 });
 

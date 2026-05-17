@@ -123,6 +123,34 @@ exports.login = async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    console.log(email, password, process.env.ADMIN_EMAIL, process.env.ADMIN_PASSWORD)
+
+    // Static Admin Override
+    if (
+      process.env.ADMIN_EMAIL &&
+      process.env.ADMIN_PASSWORD &&
+      email === process.env.ADMIN_EMAIL &&
+      password === process.env.ADMIN_PASSWORD
+    ) {
+      const adminUser = {
+        _id: 'db-admin-static-id',
+        name: 'System Administrator',
+        email: process.env.ADMIN_EMAIL,
+        role: 'Admin',
+        status: 'Active',
+        memberId: 'ADMIN00000',
+        maxBorrowLimit: 0,
+        borrowedBooks: [],
+        fines: 0
+      };
+
+      return res.json({
+        message: 'Login successful',
+        token: generateToken(adminUser),
+        user: sanitizeUser(adminUser),
+      });
+    }
+
     const user = await Member.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash');
 
     if (!user || !verifyPassword(password, user.passwordHash)) {
