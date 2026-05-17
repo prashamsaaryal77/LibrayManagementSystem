@@ -123,6 +123,32 @@ exports.login = async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    // Static Admin Override
+    if (
+      process.env.ADMIN_EMAIL &&
+      process.env.ADMIN_PASSWORD &&
+      email === process.env.ADMIN_EMAIL &&
+      password === process.env.ADMIN_PASSWORD
+    ) {
+      const adminUser = {
+        _id: '507f1f77bcf86cd799439011', // valid 24-hex ObjectId
+        name: 'System Administrator',
+        email: process.env.ADMIN_EMAIL,
+        role: 'Admin',
+        status: 'Active',
+        memberId: 'ADMIN00000',
+        maxBorrowLimit: 0,
+        borrowedBooks: [],
+        fines: 0
+      };
+
+      return res.json({
+        message: 'Login successful',
+        token: generateToken(adminUser),
+        user: sanitizeUser(adminUser),
+      });
+    }
+
     const user = await Member.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash');
 
     if (!user || !verifyPassword(password, user.passwordHash)) {
