@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home, Users, BookOpen, RotateCw, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function AdminLayout({
@@ -11,7 +11,41 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const storedUser = localStorage.getItem('library-user');
+      let user = null;
+      try {
+        if (storedUser) user = JSON.parse(storedUser);
+      } catch (e) {
+        // ignore
+      }
+
+      const isAdmin = user && user.role === 'Admin';
+      const isLoginPage = pathname === '/admin/login';
+
+      if (!isAdmin && !isLoginPage) {
+        router.push('/admin/login');
+      } else if (isAdmin && isLoginPage) {
+        router.push('/admin/dashboard');
+      } else {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+  }, [pathname, router]);
+
+  const handleLogout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    localStorage.removeItem('library-user');
+    localStorage.removeItem('library-token');
+    router.push('/admin/login');
+  };
 
   const navLinks = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: Home },
@@ -21,6 +55,24 @@ export default function AdminLayout({
     { name: 'Return Book', href: '/admin/return-book', icon: RotateCw },
     { name: 'Transactions', href: '/admin/transactions', icon: BookOpen },
   ];
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-300 border-t-slate-900 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  const isLoginPage = pathname === '/admin/login';
+
+  if (isLoginPage) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-gray-100">
@@ -64,14 +116,14 @@ export default function AdminLayout({
         </nav>
 
         <div className="p-4 mt-auto border-t border-slate-700">
-          <Link 
-            href="/" 
-            className="flex items-center gap-3 px-3 py-3 rounded-lg text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors"
-            title={isCollapsed ? 'Back to Home' : ''}
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors"
+            title={isCollapsed ? 'Log Out' : ''}
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
-            {!isCollapsed && <span className="truncate">Back to Home</span>}
-          </Link>
+            {!isCollapsed && <span className="truncate">Log Out</span>}
+          </button>
         </div>
       </div>
 
