@@ -13,6 +13,14 @@ import { binarySearch } from '@/lib/algorithmUtils';
 import AuthPage from '@/components/AuthPage';
 import { toast } from '@/hooks/use-toast';
 import { EsewaPortal } from '@/components/EsewaPortal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface AppUser {
   id: string;
@@ -75,12 +83,10 @@ const MEMBER_MODULES = [
   { key: 'borrow', label: 'Borrow Book', icon: BookOpen },
   { key: 'return', label: 'Return & Fine', icon: RotateCcw },
   { key: 'payment', label: 'Fine Payment', icon: CreditCard },
-  { key: 'logout', label: 'Logout', icon: LogOut },
 ] as const;
 
 const ADMIN_MODULES = [
   { key: 'adminDashboard', label: 'Admin Dashboard', icon: Settings },
-  { key: 'logout', label: 'Logout', icon: LogOut },
 ] as const;
 
 const STORAGE_KEY = 'library-user';
@@ -312,6 +318,8 @@ export default function MainMenu() {
     return <AuthPage onAuthSuccess={handleAuthSuccess} />;
   }
 
+  console.log(process.env.DAILY_FINE_AMOUNT ,"fine")
+
   // ─── MAIN DASHBOARD ───
   return (
     <div className="min-h-screen bg-background">
@@ -324,15 +332,27 @@ export default function MainMenu() {
             </div>
             <span className="text-lg font-display font-bold text-foreground">LMS</span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-foreground">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{user.role}</p>
-            </div>
-            <div className="w-9 h-9 rounded-full gradient-warm flex items-center justify-center text-secondary-foreground font-semibold text-sm">
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity outline-none">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium text-foreground">{user.name}</p>
+                  <p className="text-xs text-muted-foreground">{user.role}</p>
+                </div>
+                <div className="w-9 h-9 rounded-full gradient-warm flex items-center justify-center text-secondary-foreground font-semibold text-sm">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setActiveModule('logout')} className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -366,9 +386,9 @@ export default function MainMenu() {
         {/* Stats Cards */}
         <motion.div initial="hidden" animate="visible" variants={stagger} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { id: 'borrowed', label: 'Books Borrowed', value: `${activeTransactions.length} / 3`, icon: BookMarked, color: 'text-primary' },
+            { id: 'borrowed', label: 'Books Borrowed', value: `${activeTransactions.length} / ${process.env.BORROW_LIMIT || 3}`, icon: BookMarked, color: 'text-primary' },
             { id: 'fine', label: 'Outstanding Fine', value: `Rs. ${user.fines || 0}`, icon: DollarSign, color: user.fines > 0 ? 'text-destructive' : 'text-success' },
-            { id: 'limit', label: 'Borrow Limit', value: '3 Books', icon: BookOpen, color: 'text-accent' },
+            { id: 'limit', label: 'Borrow Limit', value: `${process.env.BORROW_LIMIT || 3} Books`, icon: BookOpen, color: 'text-accent' },
             { id: 'status', label: 'Account Status', value: user.role, icon: Shield, color: 'text-primary' },
           ].map((stat, i) => (
             <motion.div key={i} variants={fadeUp}
@@ -391,13 +411,11 @@ export default function MainMenu() {
               const isActive = activeModule === module.key;
               return (
                 <button key={module.key}
-                  onClick={() => module.key === 'logout' ? handleLogout() : setActiveModule(module.key)}
+                  onClick={() => setActiveModule(module.key)}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-300 cursor-pointer ${
                     isActive
                       ? 'bg-gradient-to-r from-secondary to-secondary/80 text-secondary-foreground shadow-lg hover:shadow-xl'
-                      : module.key === 'logout'
-                        ? 'text-destructive hover:bg-destructive/10 hover:shadow-md'
-                        : 'text-muted-foreground hover:bg-secondary/20 hover:text-foreground hover:shadow-sm'
+                      : 'text-muted-foreground hover:bg-secondary/20 hover:text-foreground hover:shadow-sm'
                   }`}>
                   <Icon className="w-4 h-4" />
                   {module.label}
@@ -518,7 +536,7 @@ export default function MainMenu() {
                     <p className="text-base text-foreground/70">Select from available books in our collection</p>
                   </div>
                   <div className="p-4 rounded-lg bg-secondary/5 border border-secondary/10 text-sm text-foreground">
-                    <strong>Note:</strong> You can borrow up to 3 books only when your outstanding fine is Rs. 0.
+                    <strong>Note:</strong> You can borrow up to {process.env.BORROW_LIMIT || 3} books only when your outstanding fine is Rs. 0.
                   </div>
                   <div className="space-y-4">
                     <div>
@@ -546,7 +564,10 @@ export default function MainMenu() {
                 <motion.div key="return" initial="hidden" animate="visible" exit="hidden" variants={fadeUp} className="space-y-6">
                   <div>
                     <h3 className="text-xl font-display font-bold text-foreground mb-1">Return a Book</h3>
-                    <p className="text-base text-foreground/70">Return borrowed books and check for any fines</p>
+                    <p className="text-base text-foreground/70">Return borrowed books and check for any fines.</p>
+                    <p className="text-sm text-muted-foreground mt-1 bg-secondary/5 rounded px-2 py-1 inline-block border border-secondary/10">
+                      💡 <strong>Math Calculation:</strong> <span className="font-mono bg-background px-1.5 py-0.5 rounded border border-border/50 text-foreground mx-1">Total Fine = Overdue Days × Rs. {process.env.DAILY_FINE_AMOUNT || 10}</span>
+                    </p>
                   </div>
                   <div className="space-y-4">
                     <div>
@@ -554,13 +575,41 @@ export default function MainMenu() {
                       <select value={selectedTransactionId} onChange={e => setSelectedTransactionId(e.target.value)}
                         className="select-styled">
                         <option value="">— Select a transaction —</option>
-                        {activeTransactions.map(t => (
-                          <option key={t._id} value={t.transactionId}>
-                            {t.bookId} — due {new Date(t.dueDate).toLocaleDateString()}
-                          </option>
-                        ))}
+                        {activeTransactions.map(t => {
+                          const bookTitle = books.find(b => b.bookId === t.bookId)?.title || t.bookId;
+                          return (
+                            <option key={t._id} value={t.transactionId}>
+                              {bookTitle} — due {new Date(t.dueDate).toLocaleDateString()}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
+                    {(() => {
+                      if (!selectedTransactionId) return null;
+                      const selTx = activeTransactions.find(t => t.transactionId === selectedTransactionId);
+                      if (!selTx) return null;
+                      const overdueMs = new Date().getTime() - new Date(selTx.dueDate).getTime();
+                      const overdueDays = overdueMs > 0 ? Math.ceil(overdueMs / (1000 * 60 * 60 * 24)) : 0;
+                      const dailyFine = Number(process.env.DAILY_FINE_AMOUNT) || 10;
+                      const currentFine = overdueDays * dailyFine;
+
+                      if (currentFine > 0) {
+                        return (
+                          <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+                            <p className="font-semibold mb-1">Pending Fine: Rs. {currentFine}</p>
+                            <p className="text-xs opacity-90">
+                              Book is {overdueDays} day(s) overdue. ({overdueDays} × Rs. {dailyFine} = Rs. {currentFine})
+                            </p>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="p-3 text-sm text-success bg-success/10 border border-success/20 rounded-lg">
+                          No fines expected. Returned on time!
+                        </div>
+                      );
+                    })()}
                     <Button onClick={handleReturnBook} disabled={loading || !selectedTransactionId} variant="default" size="lg" className="w-full bg-success hover:bg-success/90 text-success-foreground cursor-pointer hover:shadow-lg transition-all duration-200 disabled:cursor-not-allowed">
                       {loading ? <span className="animate-spin w-4 h-4 border-2 border-success-foreground/30 border-t-success-foreground rounded-full" /> : <RotateCcw className="w-4 h-4" />}
                       {loading ? 'Returning…' : 'Return Book'}
@@ -604,7 +653,10 @@ export default function MainMenu() {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-xl font-display font-bold text-foreground mb-1">Fine Payment</h3>
-                          <p className="text-base text-foreground/70">Clear outstanding fines to continue borrowing</p>
+                          <p className="text-base text-foreground/70">Clear outstanding fines to continue borrowing.</p>
+                          <p className="text-sm text-muted-foreground mt-1 bg-secondary/5 rounded px-2 py-1 inline-block border border-secondary/10">
+                            💡 <strong>Math Calculation:</strong> <span className="font-mono bg-background px-1.5 py-0.5 rounded border border-border/50 text-foreground mx-1">Total Fine = Overdue Days × Rs. {process.env.DAILY_FINE_AMOUNT || 10}</span>
+                          </p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-foreground/70">Outstanding</p>

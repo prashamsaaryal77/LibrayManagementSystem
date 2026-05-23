@@ -63,8 +63,9 @@ exports.borrowBook = async (req, res) => {
       return res.status(404).json({ error: 'Book not found' });
     }
 
-    if ((member.borrowedBooks || []).length >= 3) {
-      return res.status(400).json({ error: 'System Pass Failed: a member can borrow fewer than 4 books at a time' });
+    const borrowLimit = Number(process.env.BORROW_LIMIT) || 3;
+    if ((member.borrowedBooks || []).length >= borrowLimit) {
+      return res.status(400).json({ error: `System Pass Failed: a member can borrow up to ${borrowLimit} books at a time` });
     }
 
     if ((member.fines || 0) > 0) {

@@ -2,7 +2,7 @@ const Transaction = require('../models/Transaction');
 const Book = require('../models/Book');
 const Member = require('../models/Member');
 
-const FINE_PER_DAY = 10;
+const FINE_PER_DAY = Number(process.env.DAILY_FINE_AMOUNT) || 10;
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
 const returnBook = async (transactionId, returnDate = new Date()) => {
