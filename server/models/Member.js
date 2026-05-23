@@ -22,7 +22,7 @@ const borrowedBookSchema = new mongoose.Schema(
 const memberSchema = new mongoose.Schema({
   memberId: {
     type: String,
-    required: function() { return this.role === 'Member'; }, // Only required for Members
+    required: function () { return this.role === 'Member'; }, // Only required for Members
     unique: true,
     sparse: true, // Allow null values for unique index
     trim: true,
@@ -70,6 +70,14 @@ const memberSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: 0,
+  },
+  resetToken: {
+    type: String,
+    default: null,
+  },
+  resetTokenExpiry: {
+    type: Date,
+    default: null,
   },
   createdAt: {
     type: Date,

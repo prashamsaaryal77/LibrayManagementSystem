@@ -45,6 +45,9 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (userData: any) => api.post('/auth/register', userData),
   login: (credentials: { email: string; password: string }) => api.post('/auth/login', credentials),
+  sendResetCode: (data: { email: string }) => api.post('/auth/send-reset-code', data),
+  verifyResetCode: (data: { email: string; code: string }) => api.post('/auth/verify-reset-code', data),
+  forgotPassword: (data: { email: string; code: string; newPassword: string }) => api.post('/auth/forgot-password', data),
 };
 
 // Member API calls

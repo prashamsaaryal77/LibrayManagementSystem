@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const Member = require('../models/Member');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -162,5 +163,108 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message || 'Unable to login' });
+  }
+};
+
+const createTransport = () => {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.example.com',
+    port: process.env.SMTP_PORT || 587,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+};
+
+exports.sendResetCode = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const user = await Member.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({ error: 'No user registered with this email address' });
+    }
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date();
+    expiry.setMinutes(expiry.getMinutes() + 10);
+
+    user.resetToken = verificationCode;
+    user.resetTokenExpiry = expiry;
+    await user.save();
+
+    const transporter = createTransport();
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || 'admin@library.com',
+      to: user.email,
+      subject: 'Library Password Reset Code',
+      html: `<p>Your password reset code is: <strong style="font-size: 1.5rem">${verificationCode}</strong></p><p>This code will expire in 10 minutes.</p>`,
+    });
+
+    return res.json({ message: 'A verification code has been sent to your email.' });
+  } catch (error) {
+    console.error('Email send error:', error);
+    res.status(500).json({ error: error.message || 'Unable to send reset code' });
+  }
+};
+
+exports.verifyResetCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ error: 'Email and code are required' });
+
+    const user = await Member.findOne({ email: email.toLowerCase().trim() });
+    if (!user) return res.status(404).json({ error: 'No user registered with this email address' });
+
+    if (!user.resetToken || user.resetToken !== code) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+
+    if (new Date() > new Date(user.resetTokenExpiry)) {
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+    }
+
+    return res.json({ message: 'Code verified successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Unable to verify code' });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: 'Email, verification code, and new password are required' });
+    }
+
+    const user = await Member.findOne({ email: email.toLowerCase().trim() });
+
+    if (!user) {
+      return res.status(404).json({ error: 'No user registered with this email address' });
+    }
+
+    if (!user.resetToken || user.resetToken !== code) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+
+    if (new Date() > new Date(user.resetTokenExpiry)) {
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    }
+
+    user.passwordHash = hashPassword(newPassword);
+    user.resetToken = null;
+    user.resetTokenExpiry = null;
+    await user.save();
+
+    return res.json({ message: 'Your password has been successfully reset. You can now login.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Unable to process password reset' });
   }
 };

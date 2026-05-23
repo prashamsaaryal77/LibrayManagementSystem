@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BookOpen, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { BookOpen, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle, Key } from 'lucide-react';
 import { authAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,11 +18,13 @@ interface ValidationErrors {
 }
 
 export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot-password'>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [resetStep, setResetStep] = useState<1 | 2 | 3>(1);
+  const [resetCode, setResetCode] = useState('');
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   
   const [formData, setFormData] = useState({
@@ -61,10 +63,16 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
       errors.email = 'Please enter a valid email address that does not start with a number';
     }
 
-    if (!formData.password.trim()) {
-      errors.password = 'Password is required';
-    } else if (!validatePassword(formData.password)) {
-      errors.password = 'Password must be at least 6 characters long';
+    if (mode === 'forgot-password' && (resetStep === 1 || resetStep === 2)) {
+      // Don't validate password yet
+    } else {
+      if (!formData.password.trim()) {
+        errors.password = 'Password is required';
+      } else if (mode === 'register' && !validatePassword(formData.password)) {
+        errors.password = 'Password must be at least 6 characters long';
+      } else if (mode === 'forgot-password' && !validatePassword(formData.password)) {
+        errors.password = 'New password must be at least 6 characters long';
+      }
     }
 
     setValidationErrors(errors);
@@ -93,24 +101,52 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
     setLoading(true);
 
     try {
-      const response = mode === 'register'
-        ? await authAPI.register({
-            name: formData.name,
+      if (mode === 'forgot-password') {
+        if (resetStep === 1) {
+          const response = await authAPI.sendResetCode({ email: formData.email });
+          toast({ title: 'Verification Code Sent', description: response.data.message || 'Check your email for the code', variant: 'default' });
+          setResetStep(2);
+        } else if (resetStep === 2) {
+          if (!resetCode.trim()) {
+            setError('Verification code is required');
+            setLoading(false);
+            return;
+          }
+          const response = await authAPI.verifyResetCode({ email: formData.email, code: resetCode });
+          toast({ title: 'Code Verified', description: response.data.message || 'Please enter your new password', variant: 'default' });
+          setResetStep(3);
+        } else {
+          const response = await authAPI.forgotPassword({
             email: formData.email,
-            password: formData.password,
-          })
-        : await authAPI.login({
-            email: formData.email,
-            password: formData.password,
+            code: resetCode,
+            newPassword: formData.password,
           });
+          toast({ title: 'Success', description: response.data.message || 'Password reset successful', variant: 'default' });
+          setMode('login');
+          setResetStep(1);
+          setResetCode('');
+          setFormData({ ...formData, password: '' });
+        }
+      } else {
+        const response = mode === 'register'
+          ? await authAPI.register({
+              name: formData.name,
+              email: formData.email,
+              password: formData.password,
+            })
+          : await authAPI.login({
+              email: formData.email,
+              password: formData.password,
+            });
 
-      const successMessage = response.data.message || `${mode === 'register' ? 'Registration' : 'Login'} successful!`;
-      toast({ title: 'Success', description: successMessage, variant: 'default' });
-      setFormData({ name: '', email: '', password: '' });
-      
-      setTimeout(() => {
-        onAuthSuccess(response.data.user, response.data.token);
-      }, 500);
+        const successMessage = response.data.message || `${mode === 'register' ? 'Registration' : 'Login'} successful!`;
+        toast({ title: 'Success', description: successMessage, variant: 'default' });
+        setFormData({ name: '', email: '', password: '' });
+        
+        setTimeout(() => {
+          onAuthSuccess(response.data.user, response.data.token);
+        }, 500);
+      }
     } catch (err: any) {
       const details = err.response?.data?.details;
       const errMessage = Array.isArray(details) ? details.join(', ') : err.response?.data?.error || 'Authentication failed';
@@ -144,8 +180,9 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
         {/* Main Card */}
         <div className="bg-card/90 dark:bg-slate-800/80 backdrop-blur-md border border-border rounded-2xl shadow-2xl p-8 space-y-6">
           {/* Mode Toggle */}
-          <div className="flex gap-2 p-1 bg-background/50 dark:bg-slate-700/30 rounded-lg">
-            <button
+          {mode !== 'forgot-password' && (
+            <div className="flex gap-2 p-1 bg-background/50 dark:bg-slate-700/30 rounded-lg">
+              <button
               onClick={() => {
                 setMode('login');
                 setError('');
@@ -173,7 +210,18 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
             >
               Join Now
             </button>
-          </div>
+            </div>
+          )}
+          {mode === 'forgot-password' && (
+            <div className="text-center p-2 mb-2">
+              <h2 className="text-xl font-bold text-foreground">Reset Password</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {resetStep === 1 ? 'Enter your email to receive a secure code.' 
+                 : resetStep === 2 ? 'Enter the 6-digit code sent to your email.'
+                 : 'Create your new password.'}
+              </p>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -209,6 +257,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                   type="email"
                   placeholder="you@example.com"
                   value={formData.email}
+                  disabled={loading || (mode === 'forgot-password' && resetStep > 1)}
                   onChange={handleInputChange}
                   className={`pl-10 ${validationErrors.email ? 'border-red-500 focus:border-red-500' : ''}`}
                 />
@@ -221,8 +270,41 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
               )}
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground">Password</label>
+            {mode === 'forgot-password' && resetStep === 2 && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">Verification Code</label>
+                <div className="relative">
+                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    name="resetCode"
+                    type="text"
+                    placeholder="123456"
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value)}
+                    className="pl-10"
+                    disabled={loading}
+                    autoFocus
+                  />
+                </div>
+              </div>
+            )}
+
+            {(mode !== 'forgot-password' || resetStep === 3) && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-foreground">
+                    {mode === 'forgot-password' ? 'New Password' : 'Password'}
+                  </label>
+                  {mode === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => { setMode('forgot-password'); setError(''); setSuccess(''); setValidationErrors({}); setResetStep(1); setResetCode(''); }}
+                      className="text-xs font-semibold text-primary hover:underline hover:text-primary/80 transition-colors"
+                    >
+                      Forgot Password?
+                    </button>
+                  )}
+                </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -248,6 +330,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                 </p>
               )}
             </div>
+            )}
 
             <Button
               type="submit"
@@ -261,10 +344,12 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {mode === 'register' ? 'Creating Account...' : 'Signing In...'}
+                  {mode === 'register' ? 'Creating Account...' : mode === 'forgot-password' ? 'Processing...' : 'Signing In...'}
                 </div>
               ) : mode === 'register' ? (
                 'Create Account'
+              ) : mode === 'forgot-password' ? (
+                resetStep === 1 ? 'Send Code' : resetStep === 2 ? 'Verify Code' : 'Save New Password'
               ) : (
                 'Sign In'
               )}
@@ -291,14 +376,16 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
         <p className="text-center text-foreground text-sm mt-6">
           {mode === 'register'
             ? 'Already have an account? '
+            : mode === 'forgot-password'
+            ? 'Remembered your password? '
             : "Don't have an account? "}
           <button
-            onClick={() => setMode(mode === 'register' ? 'login' : 'register')}
+            onClick={() => { setMode(mode === 'register' ? 'login' : 'register'); setError(''); setSuccess(''); setResetStep(1); setResetCode(''); }}
             className={`font-semibold hover:underline ${
               mode === 'register' ? 'text-secondary' : 'text-primary'
             }`}
           >
-            {mode === 'register' ? 'Sign in' : 'Join now'}
+            {mode === 'register' || mode === 'forgot-password' ? 'Sign in' : 'Join now'}
           </button>
         </p>
       </div>
