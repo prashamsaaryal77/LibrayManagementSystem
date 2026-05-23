@@ -27,6 +27,9 @@ app.use('/api/members', require('./routes/members'));
 app.use('/api/books', require('./routes/books'));
 app.use('/api/transactions', require('./routes/transactions'));
 
+// Start Cron Jobs
+require('./services/cronService');
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running' });

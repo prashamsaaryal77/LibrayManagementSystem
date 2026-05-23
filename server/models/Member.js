@@ -15,6 +15,10 @@ const borrowedBookSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    reminderSent: {
+      type: Boolean,
+      default: false,
+    },
   },
   { _id: false }
 );
