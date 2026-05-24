@@ -4,20 +4,20 @@ const Member = require('../models/Member');
 
 let transporter = null;
 
-// Create an Ethereal test account automatically — no config needed!
+// Use SMTP configuration from environment variables
 const getTransporter = async () => {
     if (transporter) return transporter;
 
-    const testAccount = await nodemailer.createTestAccount();
     transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        secure: false, // true for 465, false for other ports
         auth: {
-            user: testAccount.user,
-            pass: testAccount.pass,
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
         },
     });
-    console.log(`✓ Ethereal test email: ${testAccount.user}`);
+    console.log(`✓ Mail service initialized for: ${process.env.SMTP_USER}`);
     return transporter;
 };
 
@@ -63,7 +63,7 @@ const sendDueReminders = async () => {
             ).join('');
 
             const info = await mailer.sendMail({
-                from: '"Library System" <library@test.com>',
+                from: process.env.SMTP_FROM || '"Library System" <admin@library.com>',
                 to: member.email,
                 subject: 'Library Book Due Reminder',
                 html: `<p>Hello ${member.name},</p><p>These books are due soon:</p><ul>${bookList}</ul><p>Please return them on time!</p>`,
@@ -75,9 +75,7 @@ const sendDueReminders = async () => {
             }
             await member.save();
 
-            // Click this link to SEE the email in your browser!
             console.log(`✉ Reminder sent to ${member.email}`);
-            console.log(`  → Preview: ${nodemailer.getTestMessageUrl(info)}`);
         }
     } catch (err) {
         console.error('Cron error:', err);
@@ -90,6 +88,6 @@ cron.schedule('* * * * *', () => {
     sendDueReminders();
 });
 
-console.log('✓ Cron Service Initialized (Ethereal test mode)');
+console.log('✓ Cron Service Initialized (SMTP mode)');
 
 module.exports = { sendDueReminders };
