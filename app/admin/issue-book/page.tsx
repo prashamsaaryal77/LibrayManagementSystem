@@ -5,7 +5,7 @@ export default function IssueBookPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Issue Book to Member</h1>
-        <p className="text-gray-600 mt-2">Implement the 16-step library algorithm</p>
+        <p className="text-gray-600 mt-2">Fill out the form below to issue a book to a registered member.</p>
       </div>
       <IssueBookForm />
     </div>
